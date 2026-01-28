@@ -108,6 +108,12 @@ class GeoJSONFeatureCollection(BaseModel):
     features: List[GeoJSONFeature]
 
 
+class Geometry(BaseModel):
+    """Geometry model with UUID reference"""
+    id: UUID
+    geometry: GeoJSONFeatureCollection
+
+
 class Occupancy(BaseModel):
     """Tenant occupancy on a floor"""
     tenantId: UUID
@@ -139,7 +145,7 @@ class Floor(BaseModel):
     floorNumber: int
     label: Optional[str] = None
     squareFeet: Optional[float] = None
-    geometry: Optional[GeoJSONFeatureCollection] = None
+    geometry: Optional[UUID] = None
     occupancies: List[Occupancy] = Field(default_factory=list)
 
 
@@ -154,6 +160,7 @@ class StackingPlan(BaseModel):
     building: Building
     tenants: List[Tenant]
     floors: List[Floor]
+    geometries: List[Geometry]
 
 
 class TenantOccupancyInfo(BaseModel):
