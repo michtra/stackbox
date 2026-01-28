@@ -71,11 +71,11 @@
       {
         "type": "Feature",
         "properties": {
-          "floorId": "UUID"
+          "floorNumber": "integer"
         },
         "geometry": {
           "type": "Polygon",
-          "coordinates": [[[lon, lat], [lon, lat], ...]]
+          "coordinates": [[[longitude, latitude], [longitude, latitude], ...]]
         }
       }
     ]
@@ -94,7 +94,7 @@
 **Notes:**
 - `floorNumber`: 0 = ground floor
 - `geometry`: GeoJSON FeatureCollection storing floor shape coordinates (optional)
-- Each floor has a unique `floorId` in the GeoJSON properties
+- GeoJSON coordinates use `[longitude, latitude]` order per RFC 7946 specification
 - `occupancies` supports multiple tenants per floor. Empty means vacant floor
 
 ---
