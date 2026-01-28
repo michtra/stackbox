@@ -75,7 +75,7 @@
         },
         "geometry": {
           "type": "Polygon",
-          "coordinates": [[[longitude, latitude], [longitude, latitude], ...]]
+          "coordinates": [[[-122.4, 37.8], [-122.3, 37.8], [-122.3, 37.7], ...]]
         }
       }
     ]
@@ -183,7 +183,21 @@ Returns: `204 No Content`
 
 **`GET /tenants/{id}/occupancies`**
 
-Returns: `{ data: [{ buildingId: "UUID", buildingName: "string", floorNumber: "integer", squareFeet: "number", leaseStart: "ISO 8601", leaseEnd: "ISO 8601" }, ...] }`
+Returns:
+```json
+{
+  "data": [
+    {
+      "buildingId": "UUID",
+      "buildingName": "string",
+      "floorNumber": "integer",
+      "squareFeet": "number",
+      "leaseStart": "ISO 8601",
+      "leaseEnd": "ISO 8601"
+    }
+  ]
+}
+```
 
 ---
 
@@ -203,13 +217,13 @@ Returns: `{ data: [Floor, ...] }`
 
 **`PUT /buildings/{id}/floors/{floorNumber}`**
 
-Body: `{ label: "string", squareFeet: "number" }` (partial update)
+Body: `{ label: "string (optional)", squareFeet: "number (optional)" }` (partial update)
 
 Returns: `{ data: Floor }`
 
 **`POST /buildings/{id}/floors/{floorNumber}/occupancies`**
 
-Body: `{ tenantId: "UUID", squareFeet: "number", leaseStart: "ISO 8601", leaseEnd: "ISO 8601" }`
+Body: `{ tenantId: "UUID", squareFeet: "number (optional)", leaseStart: "ISO 8601 (optional)", leaseEnd: "ISO 8601 (optional)" }`
 
 Validation: tenant must exist, valid lease dates
 
@@ -217,7 +231,7 @@ Returns: `201 Created` with `{ data: Floor }`
 
 **`PUT /buildings/{id}/floors/{floorNumber}/occupancies/{tenantId}`**
 
-Body: `{ squareFeet: "number", leaseStart: "ISO 8601", leaseEnd: "ISO 8601" }` (partial update)
+Body: `{ squareFeet: "number (optional)", leaseStart: "ISO 8601 (optional)", leaseEnd: "ISO 8601 (optional)" }` (partial update)
 
 Returns: `{ data: Floor }`
 
