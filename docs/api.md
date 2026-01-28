@@ -65,6 +65,21 @@
   "floorNumber": "integer",
   "label": "string (optional)",
   "squareFeet": "number (optional)",
+  "geometry": {
+    "type": "FeatureCollection",
+    "features": [
+      {
+        "type": "Feature",
+        "properties": {
+          "floorNumber": "integer"
+        },
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [[[-122.4, 37.8], [-122.3, 37.8], [-122.3, 37.7], ...]]
+        }
+      }
+    ]
+  },
   "occupancies": [
     {
       "tenantId": "UUID",
@@ -78,11 +93,13 @@
 
 **Notes:**
 - `floorNumber`: 0 = ground floor
+- `geometry`: GeoJSON FeatureCollection storing floor shape coordinates (optional)
+- GeoJSON coordinates use `[longitude, latitude]` order per RFC 7946 specification
 - `occupancies` supports multiple tenants per floor. Empty means vacant floor
 
 ---
 
-### Stacking Plan Response
+### StackingPlan
 
 ```json
 {
@@ -144,6 +161,44 @@ Query: `search` (filter by name)
 
 Returns: `{ data: [Tenant, ...] }`
 
+**`POST /tenants`**
+
+Body: `Tenant` (without `id`, `createdAt`, `updatedAt`)
+
+Returns: `201 Created` with `{ data: Tenant }`
+
+**`GET /tenants/{id}`**
+
+Returns: `{ data: Tenant }`
+
+**`PUT /tenants/{id}`**
+
+Body: `Tenant` (partial update allowed)
+
+Returns: `{ data: Tenant }`
+
+**`DELETE /tenants/{id}`**
+
+Returns: `204 No Content`
+
+**`GET /tenants/{id}/occupancies`**
+
+Returns:
+```json
+{
+  "data": [
+    {
+      "buildingId": "UUID",
+      "buildingName": "string",
+      "floorNumber": "integer",
+      "squareFeet": "number",
+      "leaseStart": "ISO 8601",
+      "leaseEnd": "ISO 8601"
+    }
+  ]
+}
+```
+
 ---
 
 ### Floors
@@ -156,13 +211,33 @@ Returns: `{ data: [Tenant, ...] }`
 | `PUT` | `/buildings/{id}/floors/{floorNumber}/occupancies/{tenantId}` | Update occupancy |
 | `DELETE` | `/buildings/{id}/floors/{floorNumber}/occupancies/{tenantId}` | Remove tenant |
 
+**`GET /buildings/{id}/floors`**
+
+Returns: `{ data: [Floor, ...] }`
+
+**`PUT /buildings/{id}/floors/{floorNumber}`**
+
+Body: `{ label: "string (optional)", squareFeet: "number (optional)" }` (partial update)
+
+Returns: `{ data: Floor }`
+
 **`POST /buildings/{id}/floors/{floorNumber}/occupancies`**
 
-Body: `{ tenantId: "UUID", leaseStart: "ISO 8601", leaseEnd: "ISO 8601" }`
+Body: `{ tenantId: "UUID", squareFeet: "number (optional)", leaseStart: "ISO 8601 (optional)", leaseEnd: "ISO 8601 (optional)" }`
 
 Validation: tenant must exist, valid lease dates
 
-Returns: `201 Created`
+Returns: `201 Created` with `{ data: Floor }`
+
+**`PUT /buildings/{id}/floors/{floorNumber}/occupancies/{tenantId}`**
+
+Body: `{ squareFeet: "number (optional)", leaseStart: "ISO 8601 (optional)", leaseEnd: "ISO 8601 (optional)" }` (partial update)
+
+Returns: `{ data: Floor }`
+
+**`DELETE /buildings/{id}/floors/{floorNumber}/occupancies/{tenantId}`**
+
+Returns: `204 No Content`
 
 ---
 
