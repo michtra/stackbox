@@ -65,6 +65,23 @@
   "floorNumber": "integer",
   "label": "string (optional)",
   "squareFeet": "number (optional)",
+  "geometry": "UUID",
+  "occupancies": [
+    {
+      "tenantId": "UUID",
+      "squareFeet": "number (optional)",
+      "leaseStart": "ISO 8601 date (optional)",
+      "leaseEnd": "ISO 8601 date (optional)"
+    }
+  ]
+}
+```
+
+### Geometry
+
+```json
+{
+  "id": "UUID",
   "geometry": {
     "type": "FeatureCollection",
     "features": [
@@ -79,15 +96,7 @@
         }
       }
     ]
-  },
-  "occupancies": [
-    {
-      "tenantId": "UUID",
-      "squareFeet": "number (optional)",
-      "leaseStart": "ISO 8601 date (optional)",
-      "leaseEnd": "ISO 8601 date (optional)"
-    }
-  ]
+  }
 }
 ```
 
@@ -105,7 +114,8 @@
 {
   "building": Building,
   "tenants": [Tenant, ...],
-  "floors": [Floor, ...]
+  "floors": [Floor, ...],
+  "geometries": [Geometry, ...]
 }
 ```
 
