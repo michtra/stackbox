@@ -1,11 +1,12 @@
 'use client'
 
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import mapboxgl from 'mapbox-gl';
 
 import 'mapbox-gl/dist/mapbox-gl.css'
 
 import stacking from '../../data/stacking.json';
+import { ChartPanel } from './components/charts';
 
 /**
  * Finds point intersecting GeoJSON geometry side using line-line intersection calculation
@@ -106,6 +107,7 @@ function proportionGeojson(centerCoord, percentageList, floorPlan) {
 export default function Home() {
     const mapRef = useRef();
     const mapContainerRef = useRef();
+    const [isChartPanelOpen, setIsChartPanelOpen] = useState(false);
 
     const buildingFloorHeight = stacking.height/stacking.floors;
     const showInfo = (e) => {
@@ -336,6 +338,11 @@ export default function Home() {
     return (
         <div className='overflow-hidden'>
             <div id='map-container' ref={mapContainerRef} className='w-screen h-screen'></div>
+            <ChartPanel 
+                stackingData={stacking}
+                isOpen={isChartPanelOpen}
+                onToggle={() => setIsChartPanelOpen(!isChartPanelOpen)}
+            />
         </div>
     );
 }
