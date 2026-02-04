@@ -6,7 +6,9 @@ import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css'
 
 import stacking from '../../data/stacking.json';
-import { ChartPanel } from './components/charts';
+import OccupancyPieChart from './components/charts/OccupancyPieChart';
+import FloorOccupancyChart from './components/charts/FloorOccupancyChart';
+import ChartExportButton from './components/charts/ChartExportButton';
 
 /**
  * Finds point intersecting GeoJSON geometry side using line-line intersection calculation
@@ -107,7 +109,10 @@ function proportionGeojson(centerCoord, percentageList, floorPlan) {
 export default function Home() {
     const mapRef = useRef();
     const mapContainerRef = useRef();
-    const [isChartPanelOpen, setIsChartPanelOpen] = useState(false);
+    const pieChartRef = useRef(null);
+    const floorChartRef = useRef(null);
+    const [activeTab, setActiveTab] = useState('map');
+    const [chartTab, setChartTab] = useState('pie');
 
     const buildingFloorHeight = stacking.height/stacking.floors;
     const showInfo = (e) => {
@@ -128,6 +133,15 @@ export default function Home() {
     var floorPopup = new mapboxgl.Popup();
 
     useEffect(() => {
+        if (activeTab !== 'map') {
+            if (mapRef.current) {
+                mapRef.current.remove();
+                mapRef.current = null;
+            }
+            return;
+        }
+        if (mapRef.current) return;
+
         var centerCoord = []
         stacking.coordinates.forEach((floorPlan) => {
             var maxCoord = [-Infinity, -Infinity];
@@ -332,17 +346,85 @@ export default function Home() {
             
         mapRef.current.on('click', 'stackingplan-layer', (e) => showInfo(e));
 
-        return () => mapRef.current.remove();
-    }, []);
+        return () => {
+            if (mapRef.current) {
+                mapRef.current.remove();
+                mapRef.current = null;
+            }
+        };
+    }, [activeTab]);
 
     return (
-        <div className='overflow-hidden'>
-            <div id='map-container' ref={mapContainerRef} className='w-screen h-screen'></div>
-            <ChartPanel 
-                stackingData={stacking}
-                isOpen={isChartPanelOpen}
-                onToggle={() => setIsChartPanelOpen(!isChartPanelOpen)}
-            />
+        <div className='h-screen overflow-hidden'>
+            <div className="flex border-b border-gray-200 bg-white z-10 relative">
+                <button
+                    onClick={() => setActiveTab('map')}
+                    className={`flex-1 px-4 py-2 text-sm font-medium transition-colors duration-200 ${activeTab === 'map' ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50' : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'}`}
+                >
+                    Map
+                </button>
+                <button
+                    onClick={() => setActiveTab('charts')}
+                    className={`flex-1 px-4 py-2 text-sm font-medium transition-colors duration-200 ${activeTab === 'charts' ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50' : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'}`}
+                >
+                    Charts
+                </button>
+            </div>
+            {activeTab === 'map' && <div id='map-container' ref={mapContainerRef} className='w-screen h-full'></div>}
+            {activeTab === 'charts' && (
+                <div className='w-screen h-full flex flex-col bg-white'>
+                    <div className="flex border-b border-gray-200">
+                        <button
+                            onClick={() => setChartTab('pie')}
+                            className={`flex-1 px-4 py-2 text-sm font-medium transition-colors duration-200 ${chartTab === 'pie' ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50' : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'}`}
+                        >
+                            Overview
+                        </button>
+                        <button
+                            onClick={() => setChartTab('floor')}
+                            className={`flex-1 px-4 py-2 text-sm font-medium transition-colors duration-200 ${chartTab === 'floor' ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50' : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'}`}
+                        >
+                            By Floor
+                        </button>
+                    </div>
+                    <div className="flex-1 overflow-auto p-4">
+                        {chartTab === 'pie' && (
+                            <div ref={pieChartRef}>
+                                <div className="flex items-center justify-between mb-4">
+                                    <h2 className="text-lg font-bold text-gray-800">Building Occupancy by Tenant</h2>
+                                    <ChartExportButton 
+                                        targetRef={pieChartRef}
+                                        filename="building-occupancy-pie"
+                                    >
+                                        Export
+                                    </ChartExportButton>
+                                </div>
+                                <OccupancyPieChart stackingData={stacking} />
+                            </div>
+                        )}
+                        {chartTab === 'floor' && (
+                            <div ref={floorChartRef}>
+                                <div className="flex items-center justify-between mb-4">
+                                    <h2 className="text-lg font-bold text-gray-800">Occupancy by Floor</h2>
+                                    <ChartExportButton 
+                                        targetRef={floorChartRef}
+                                        filename="occupancy-by-floor"
+                                    >
+                                        Export
+                                    </ChartExportButton>
+                                </div>
+                                <FloorOccupancyChart stackingData={stacking} />
+                            </div>
+                        )}
+                    </div>
+                    <div className="p-3 border-t border-gray-200 bg-gray-50 text-xs text-gray-600">
+                        <div className="flex justify-between">
+                            <span>Total Floors: {stacking.floors}</span>
+                            <span>Tenants: {Object.keys(stacking.tenants).length}</span>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
