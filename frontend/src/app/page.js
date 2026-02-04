@@ -104,7 +104,7 @@ function proportionGeojson(centerCoord, percentageList, floorPlan) {
     return geoJsonList;
 }
 
-export default function Home() {
+export default function Page() {
     const mapRef = useRef();
     const mapContainerRef = useRef();
 

@@ -1,7 +1,7 @@
-from routers import models
 import time
+import json
 
-from floorplan import FloorGenerator
+from utilities.floorplan import FloorGenerator
 
 async def excelLoader(filepath):
     """Processes and loads Excel files into DB.
@@ -19,5 +19,5 @@ def stackplanLoader(filepath, floors):
     """
     stackingplan = FloorGenerator(filepath, floors)
     stackingplan.generateFloors()
-    with open(f'resources/{time.time_ns()}', 'w') as f:
-        f.write(stackingplan.getCoords())
+    with open(f'resources/{time.time_ns()}.json', 'w') as coordBuffer:
+        json.dump(stackingplan.getCoords(), coordBuffer)

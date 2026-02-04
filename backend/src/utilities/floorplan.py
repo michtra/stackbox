@@ -19,11 +19,11 @@ class FloorGenerator:
     def getCoords(self):
         coords = []
         for section in self.sections:
-            coords.append([polygon.exterior.coords for polygon in section.polygons_closed])
+            coords.append([list(polygon.exterior.coords) for polygon in section.polygons_closed])
         return coords
     
     def getCoordsOuter(self):
         coords = []
         for section in self.sections:
-            coords.append([polygon.exterior.coords for polygon in section.polygons_full])
+            coords.append([list(polygon.exterior.coords) for polygon in section.polygons_full])
         return coords
