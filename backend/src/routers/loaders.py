@@ -17,7 +17,7 @@ async def upload_context_file(type: str, file: UploadFile, floors: int | None = 
     if type == "stl":
         stackplanLoader(f'./resources/{file.filename}', floors)
     elif type == "xlsx":
-        excelLoader(f'./resources/{file.filename}')
+        return excelLoader(f'./resources/{file.filename}')
     else:
         raise HTTPException(500, detail=f'{file.filename} of {type} is not supported.')
     raise HTTPException(200, detail=f'{file.filename} of size {file.size} uploaded.')
