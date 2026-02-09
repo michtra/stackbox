@@ -88,7 +88,6 @@ def read_root():
 def read_item(item_id: int, q: Union[str, None] = None):
     return {"item_id": item_id, "q": q}
 
-<<<<<<< HEAD
 # S3 Upload Endpoints
 @app.post("/api/v1/presigned-url", response_model=PresignedUrlResponse)
 def get_presigned_url(request: PresignedUrlRequest):
