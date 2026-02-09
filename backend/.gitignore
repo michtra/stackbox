@@ -11,3 +11,6 @@ __pycache__/
 
 # test JSON files
 resources/*
+
+# file uploads
+uploads/

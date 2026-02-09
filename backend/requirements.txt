@@ -94,4 +94,7 @@ vtk==9.5.0
 watchfiles==1.1.0
 wcwidth==0.5.2
 websockets==15.0.1
+psycopg2-binary>=2.9.0
+pydantic-settings>=2.0.0
+sqlalchemy>=2.0.0
 xxhash==3.6.0

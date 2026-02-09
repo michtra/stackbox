@@ -1,23 +1,27 @@
-import time
 import json
+from uuid import UUID
 
 from utilities.floorplan import FloorGenerator
+from utilities.file_storage import save_processed_json
 
-async def excelLoader(filepath):
+
+def excelLoader(filepath):
     """Processes and loads Excel files into DB.
 
     Args:
-        filename (str): Path to file or the URI to file.
+        filepath: Path to the Excel file.
     """
 
-def stackplanLoader(filepath, floors):
-    """Processes and loads Excel files into a JSON file.
+
+def stackplanLoader(filepath, floors, building_id: UUID):
+    """Processes a 3D model file and saves extracted floor coordinates as JSON.
 
     Args:
-        filename (str): Path to the 3D model.
-        floors (int): Number of floors the building has. TODO: We'll probably have to grab this from the DB if we eventually move there
+        filepath: Path to the 3D model file.
+        floors: Number of floors the building has.
+        building_id: UUID of the building for organized storage.
     """
     stackingplan = FloorGenerator(filepath, floors)
     stackingplan.generateFloors()
-    with open(f'resources/{time.time_ns()}.json', 'w') as coordBuffer:
-        json.dump(stackingplan.getCoords(), coordBuffer)
+    data = json.dumps(stackingplan.getCoords())
+    save_processed_json(building_id, data)

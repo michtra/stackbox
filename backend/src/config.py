@@ -15,6 +15,11 @@ class Settings(BaseSettings):
     # Upload Configuration
     presigned_url_expiration: int = 300  # 5 minutes, assumes STL files are small (few MB)
 
+    # Local Storage Configuration
+    upload_directory: str = "uploads"
+    max_file_size_mb: int = 100
+    allowed_file_extensions: list[str] = [".stl", ".glb", ".xlsx"]
+
     # Application Configuration
     environment: str = "development"  # development, staging, production
 

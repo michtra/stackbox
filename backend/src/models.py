@@ -247,6 +247,8 @@ class STLUploadRequest(BaseModel):
     baseElevation: float = Field(description="Base elevation in meters")
 
 
+# FUTURE: Models below are for S3 upload flow (not currently active)
+
 class PresignedUrlRequest(BaseModel):
     """Request model for generating a temporary presigned S3 upload URL.
 
