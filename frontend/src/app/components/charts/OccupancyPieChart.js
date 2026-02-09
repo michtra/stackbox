@@ -47,7 +47,7 @@ function calculateTenantOccupancy(stackingData) {
     return { labels, values, colors };
 }
 
-export default function OccupancyPieChart({ stackingData, title = 'Tenant Occupancy Distribution' }) {
+export default function OccupancyPieChart({ stackingData, title = 'Tenant Occupancy Distribution', isDarkMode = false }) {
     const { labels, values, colors } = calculateTenantOccupancy(stackingData);
 
     const data = {
@@ -65,29 +65,40 @@ export default function OccupancyPieChart({ stackingData, title = 'Tenant Occupa
     const options = {
         responsive: true,
         maintainAspectRatio: false,
+        backgroundColor: isDarkMode ? '#1e293b' : '#ffffff',
+        color: isDarkMode ? '#e2e8f0' : '#111827',
         plugins: {
             legend: {
-                position: 'right',
+                position: 'bottom',
                 labels: {
-                    padding: 15,
+                    padding: 20,
                     usePointStyle: true,
+                    pointStyle: 'circle',
                     font: {
-                        size: 11
-                    }
+                        size: 14,
+                        weight: '500'
+                    },
+                    color: isDarkMode ? '#e2e8f0' : '#1f2937',
+                    boxWidth: 12,
+                    boxHeight: 12
                 }
             },
             title: {
-                display: true,
-                text: title,
-                font: {
-                    size: 16,
-                    weight: 'bold'
-                },
-                padding: {
-                    bottom: 20
-                }
+                display: false
             },
             tooltip: {
+                backgroundColor: isDarkMode ? '#0f172a' : '#1f2937',
+                titleColor: '#ffffff',
+                bodyColor: '#ffffff',
+                padding: 12,
+                cornerRadius: 8,
+                titleFont: {
+                    size: 14,
+                    weight: 'bold'
+                },
+                bodyFont: {
+                    size: 13
+                },
                 callbacks: {
                     label: function(context) {
                         const total = context.dataset.data.reduce((a, b) => a + b, 0);
@@ -100,8 +111,16 @@ export default function OccupancyPieChart({ stackingData, title = 'Tenant Occupa
     };
 
     return (
-        <div className="w-full h-64">
-            <Pie data={data} options={options} />
+        <div className="w-full h-full flex items-center justify-center" style={{ 
+            minHeight: '500px', 
+            backgroundColor: isDarkMode ? '#1e293b' : '#ffffff' 
+        }}>
+            <div className="w-full max-w-2xl" style={{ 
+                height: '500px', 
+                backgroundColor: isDarkMode ? '#1e293b' : '#ffffff' 
+            }}>
+                <Pie data={data} options={options} />
+            </div>
         </div>
     );
 }

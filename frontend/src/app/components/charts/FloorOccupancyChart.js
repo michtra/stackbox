@@ -66,36 +66,47 @@ function buildFloorOccupancyData(stackingData) {
     };
 }
 
-export default function FloorOccupancyChart({ stackingData, title = 'Floor-by-Floor Occupancy' }) {
+export default function FloorOccupancyChart({ stackingData, title = 'Floor-by-Floor Occupancy', isDarkMode = false }) {
     const data = buildFloorOccupancyData(stackingData);
 
     const options = {
         responsive: true,
         maintainAspectRatio: false,
-        indexAxis: 'y', // Horizontal bars - floors on y-axis
+        indexAxis: 'y',
+        backgroundColor: isDarkMode ? '#1e293b' : '#ffffff',
+        color: isDarkMode ? '#e2e8f0' : '#111827',
         plugins: {
             legend: {
                 position: 'bottom',
                 labels: {
-                    padding: 15,
+                    padding: 20,
                     usePointStyle: true,
+                    pointStyle: 'circle',
                     font: {
-                        size: 10
-                    }
+                        size: 13,
+                        weight: '500'
+                    },
+                    color: isDarkMode ? '#e2e8f0' : '#1f2937',
+                    boxWidth: 12,
+                    boxHeight: 12
                 }
             },
             title: {
-                display: true,
-                text: title,
-                font: {
-                    size: 16,
-                    weight: 'bold'
-                },
-                padding: {
-                    bottom: 10
-                }
+                display: false
             },
             tooltip: {
+                backgroundColor: isDarkMode ? '#0f172a' : '#1f2937',
+                titleColor: '#ffffff',
+                bodyColor: '#ffffff',
+                padding: 12,
+                cornerRadius: 8,
+                titleFont: {
+                    size: 14,
+                    weight: 'bold'
+                },
+                bodyFont: {
+                    size: 13
+                },
                 callbacks: {
                     label: function(context) {
                         return `${context.dataset.label}: ${context.parsed.x.toFixed(1)}%`;
@@ -107,24 +118,49 @@ export default function FloorOccupancyChart({ stackingData, title = 'Floor-by-Fl
             x: {
                 stacked: true,
                 max: 100,
+                grid: {
+                    color: isDarkMode ? '#334155' : '#e5e7eb'
+                },
+                ticks: {
+                    font: {
+                        size: 12,
+                        weight: '500'
+                    },
+                    color: isDarkMode ? '#cbd5e1' : '#4b5563'
+                },
                 title: {
                     display: true,
-                    text: 'Occupancy %'
+                    text: 'Occupancy %',
+                    font: {
+                        size: 14,
+                        weight: 'bold'
+                    },
+                    color: isDarkMode ? '#e2e8f0' : '#1f2937',
+                    padding: { top: 10 }
                 }
             },
             y: {
                 stacked: true,
+                grid: {
+                    display: false
+                },
                 ticks: {
                     font: {
-                        size: 9
-                    }
+                        size: 13,
+                        weight: '500'
+                    },
+                    color: isDarkMode ? '#e2e8f0' : '#1f2937',
+                    padding: 10
                 }
             }
         }
     };
 
     return (
-        <div className="w-full" style={{ height: `${Math.max(400, stackingData.floors * 12)}px` }}>
+        <div className="w-full" style={{ 
+            height: `${Math.max(600, stackingData.floors * 20)}px`, 
+            backgroundColor: isDarkMode ? '#1e293b' : '#ffffff' 
+        }}>
             <Bar data={data} options={options} />
         </div>
     );

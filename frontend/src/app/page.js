@@ -113,6 +113,7 @@ export default function Home() {
     const floorChartRef = useRef(null);
     const [activeTab, setActiveTab] = useState('map');
     const [chartTab, setChartTab] = useState('pie');
+    const [isDarkMode, setIsDarkMode] = useState(false);
 
     const buildingFloorHeight = stacking.height/stacking.floors;
     const showInfo = (e) => {
@@ -355,72 +356,140 @@ export default function Home() {
     }, [activeTab]);
 
     return (
-        <div className='h-screen overflow-hidden'>
-            <div className="flex border-b border-gray-200 bg-white z-10 relative">
+        <div className='h-screen overflow-hidden' style={{ backgroundColor: isDarkMode ? '#0f172a' : '#ffffff' }}>
+            <div className="flex border-b z-10 relative" style={{ backgroundColor: isDarkMode ? '#1e293b' : '#ffffff', borderColor: isDarkMode ? '#334155' : '#e5e7eb' }}>
                 <button
                     onClick={() => setActiveTab('map')}
-                    className={`flex-1 px-4 py-2 text-sm font-medium transition-colors duration-200 ${activeTab === 'map' ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50' : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'}`}
+                    className={`flex-1 px-4 py-2 text-sm font-medium transition-colors duration-200 ${activeTab === 'map' ? 'text-blue-500 border-b-2 border-blue-500' : ''}`}
+                    style={{ 
+                        color: activeTab === 'map' ? '#3b82f6' : (isDarkMode ? '#94a3b8' : '#4b5563'),
+                        backgroundColor: activeTab === 'map' ? (isDarkMode ? '#1e3a5f' : '#eff6ff') : 'transparent'
+                    }}
                 >
                     Map
                 </button>
                 <button
                     onClick={() => setActiveTab('charts')}
-                    className={`flex-1 px-4 py-2 text-sm font-medium transition-colors duration-200 ${activeTab === 'charts' ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50' : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'}`}
+                    className={`flex-1 px-4 py-2 text-sm font-medium transition-colors duration-200 ${activeTab === 'charts' ? 'text-blue-500 border-b-2 border-blue-500' : ''}`}
+                    style={{ 
+                        color: activeTab === 'charts' ? '#3b82f6' : (isDarkMode ? '#94a3b8' : '#4b5563'),
+                        backgroundColor: activeTab === 'charts' ? (isDarkMode ? '#1e3a5f' : '#eff6ff') : 'transparent'
+                    }}
                 >
                     Charts
+                </button>
+                <button
+                    onClick={() => setIsDarkMode(!isDarkMode)}
+                    className="px-4 py-2 text-sm font-medium transition-colors duration-200 hover:bg-opacity-10"
+                    style={{ color: isDarkMode ? '#94a3b8' : '#4b5563' }}
+                    title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+                >
+                    {isDarkMode ? (
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <circle cx="12" cy="12" r="5"/>
+                            <line x1="12" y1="1" x2="12" y2="3"/>
+                            <line x1="12" y1="21" x2="12" y2="23"/>
+                            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+                            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+                            <line x1="1" y1="12" x2="3" y2="12"/>
+                            <line x1="21" y1="12" x2="23" y2="12"/>
+                            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+                            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+                        </svg>
+                    ) : (
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                        </svg>
+                    )}
                 </button>
             </div>
             {activeTab === 'map' && <div id='map-container' ref={mapContainerRef} className='w-screen h-full'></div>}
             {activeTab === 'charts' && (
-                <div className='w-screen h-full flex flex-col bg-white'>
-                    <div className="flex border-b border-gray-200">
+                <div className='w-screen h-full flex flex-col' style={{ 
+                    background: isDarkMode ? 'linear-gradient(to bottom right, #0f172a, #1e293b)' : 'linear-gradient(to bottom right, #f9fafb, #ffffff)'
+                }}>
+                    <div className="flex border-b shadow-sm" style={{ 
+                        backgroundColor: isDarkMode ? '#1e293b' : '#ffffff',
+                        borderColor: isDarkMode ? '#334155' : '#e5e7eb'
+                    }}>
                         <button
                             onClick={() => setChartTab('pie')}
-                            className={`flex-1 px-4 py-2 text-sm font-medium transition-colors duration-200 ${chartTab === 'pie' ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50' : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'}`}
+                            className={`flex-1 px-6 py-3 text-sm font-semibold transition-all duration-200 ${chartTab === 'pie' ? 'border-b-2 border-blue-500' : ''}`}
+                            style={{ 
+                                color: chartTab === 'pie' ? '#3b82f6' : (isDarkMode ? '#cbd5e1' : '#374151'),
+                                backgroundColor: chartTab === 'pie' ? (isDarkMode ? '#1e3a5f' : '#eff6ff') : 'transparent'
+                            }}
                         >
                             Overview
                         </button>
                         <button
                             onClick={() => setChartTab('floor')}
-                            className={`flex-1 px-4 py-2 text-sm font-medium transition-colors duration-200 ${chartTab === 'floor' ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50' : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'}`}
+                            className={`flex-1 px-6 py-3 text-sm font-semibold transition-all duration-200 ${chartTab === 'floor' ? 'border-b-2 border-blue-500' : ''}`}
+                            style={{ 
+                                color: chartTab === 'floor' ? '#3b82f6' : (isDarkMode ? '#cbd5e1' : '#374151'),
+                                backgroundColor: chartTab === 'floor' ? (isDarkMode ? '#1e3a5f' : '#eff6ff') : 'transparent'
+                            }}
                         >
                             By Floor
                         </button>
                     </div>
-                    <div className="flex-1 overflow-auto p-4">
+                    <div className="flex-1 overflow-auto">
                         {chartTab === 'pie' && (
-                            <div ref={pieChartRef}>
-                                <div className="flex items-center justify-between mb-4">
-                                    <h2 className="text-lg font-bold text-gray-800">Building Occupancy by Tenant</h2>
-                                    <ChartExportButton 
-                                        targetRef={pieChartRef}
-                                        filename="building-occupancy-pie"
-                                    >
-                                        Export
-                                    </ChartExportButton>
+                            <div ref={pieChartRef} className="h-full p-8">
+                                <div className="max-w-6xl mx-auto rounded-xl shadow-lg p-8 h-full flex flex-col" style={{ 
+                                    backgroundColor: isDarkMode ? '#1e293b' : '#ffffff'
+                                }}>
+                                    <div className="mb-6">
+                                        <h2 className="text-2xl font-bold mb-3" style={{ color: isDarkMode ? '#f1f5f9' : '#111827' }}>Building Occupancy by Tenant</h2>
+                                        <ChartExportButton 
+                                            targetRef={pieChartRef}
+                                            filename="building-occupancy-pie"
+                                            isDarkMode={isDarkMode}
+                                        >
+                                            Export
+                                        </ChartExportButton>
+                                    </div>
+                                    <div className="flex-1 flex items-center justify-center">
+                                        <OccupancyPieChart stackingData={stacking} isDarkMode={isDarkMode} />
+                                    </div>
                                 </div>
-                                <OccupancyPieChart stackingData={stacking} />
                             </div>
                         )}
                         {chartTab === 'floor' && (
-                            <div ref={floorChartRef}>
-                                <div className="flex items-center justify-between mb-4">
-                                    <h2 className="text-lg font-bold text-gray-800">Occupancy by Floor</h2>
-                                    <ChartExportButton 
-                                        targetRef={floorChartRef}
-                                        filename="occupancy-by-floor"
-                                    >
-                                        Export
-                                    </ChartExportButton>
+                            <div ref={floorChartRef} className="h-full p-8">
+                                <div className="max-w-6xl mx-auto rounded-xl shadow-lg p-8" style={{ 
+                                    backgroundColor: isDarkMode ? '#1e293b' : '#ffffff'
+                                }}>
+                                    <div className="mb-6">
+                                        <h2 className="text-2xl font-bold mb-3" style={{ color: isDarkMode ? '#f1f5f9' : '#111827' }}>Occupancy by Floor</h2>
+                                        <ChartExportButton 
+                                            targetRef={floorChartRef}
+                                            filename="occupancy-by-floor"
+                                            isDarkMode={isDarkMode}
+                                        >
+                                            Export
+                                        </ChartExportButton>
+                                    </div>
+                                    <div className="mt-4">
+                                        <FloorOccupancyChart stackingData={stacking} isDarkMode={isDarkMode} />
+                                    </div>
                                 </div>
-                                <FloorOccupancyChart stackingData={stacking} />
                             </div>
                         )}
                     </div>
-                    <div className="p-3 border-t border-gray-200 bg-gray-50 text-xs text-gray-600">
-                        <div className="flex justify-between">
-                            <span>Total Floors: {stacking.floors}</span>
-                            <span>Tenants: {Object.keys(stacking.tenants).length}</span>
+                    <div className="px-8 py-4 border-t shadow-lg" style={{ 
+                        backgroundColor: isDarkMode ? '#1e293b' : '#ffffff',
+                        borderColor: isDarkMode ? '#334155' : '#e5e7eb'
+                    }}>
+                        <div className="max-w-6xl mx-auto flex justify-between text-sm font-medium" style={{ color: isDarkMode ? '#cbd5e1' : '#374151' }}>
+                            <span className="flex items-center gap-2">
+                                <span className="inline-block w-2 h-2 rounded-full" style={{ backgroundColor: '#3b82f6' }}></span>
+                                Total Floors: <span className="font-bold" style={{ color: isDarkMode ? '#f1f5f9' : '#111827' }}>{stacking.floors}</span>
+                            </span>
+                            <span className="flex items-center gap-2">
+                                <span className="inline-block w-2 h-2 rounded-full" style={{ backgroundColor: '#3b82f6' }}></span>
+                                Tenants: <span className="font-bold" style={{ color: isDarkMode ? '#f1f5f9' : '#111827' }}>{Object.keys(stacking.tenants).length}</span>
+                            </span>
                         </div>
                     </div>
                 </div>

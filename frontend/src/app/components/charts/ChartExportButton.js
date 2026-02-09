@@ -16,7 +16,8 @@ export default function ChartExportButton({
     filename = 'chart', 
     format = 'png',
     className = '',
-    children = 'Export as Image'
+    children = 'Export as Image',
+    isDarkMode = false
 }) {
     const handleExport = useCallback(async () => {
         if (!targetRef?.current) {
@@ -26,7 +27,7 @@ export default function ChartExportButton({
 
         try {
             const canvas = await html2canvas(targetRef.current, {
-                backgroundColor: '#ffffff',
+                backgroundColor: isDarkMode ? '#1e293b' : '#ffffff',
                 scale: 2, // Higher resolution
                 logging: false,
                 useCORS: true
@@ -44,15 +45,26 @@ export default function ChartExportButton({
     return (
         <button
             onClick={handleExport}
-            className={`
-                px-3 py-1.5 
-                bg-blue-600 hover:bg-blue-700 
-                text-white text-sm font-medium
-                rounded-md shadow-sm
-                transition-colors duration-200
-                flex items-center gap-2
-                ${className}
-            `}
+            style={{
+                padding: '6px 12px',
+                backgroundColor: '#3b82f6',
+                color: 'white',
+                fontSize: '14px',
+                fontWeight: '500',
+                borderRadius: '6px',
+                boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+                transition: 'all 0.2s',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                whiteSpace: 'nowrap',
+                border: 'none',
+                cursor: 'pointer',
+                flexShrink: 0
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#3b82f6'}
+            className={className}
         >
             <svg 
                 xmlns="http://www.w3.org/2000/svg" 
