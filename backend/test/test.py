@@ -9,7 +9,7 @@ import heapq
 # Create a new plot
 fig = plt.figure()
 
-msh = mesh.Mesh.from_file('test/HalfDonut.stl')
+msh = mesh.Mesh.from_file('test/tower.stl')
 
 print('Vectors: ', msh.vectors[0])
 print('Points: ', msh.points[0])

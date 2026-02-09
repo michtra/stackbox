@@ -19,6 +19,7 @@ from models import (
 from database import get_db
 from db_models import BuildingModel, TenantModel, FloorModel, OccupancyModel, GeometryModel
 from config import settings
+from routers import loaders
 
 app = FastAPI(title="Stackbox API")
 
@@ -87,6 +88,7 @@ def read_root():
 def read_item(item_id: int, q: Union[str, None] = None):
     return {"item_id": item_id, "q": q}
 
+<<<<<<< HEAD
 # S3 Upload Endpoints
 @app.post("/api/v1/presigned-url", response_model=PresignedUrlResponse)
 def get_presigned_url(request: PresignedUrlRequest):
@@ -750,3 +752,5 @@ async def get_processing_status(id: UUID, db: Session = Depends(get_db)):
             "jobs": []
         }
     }
+
+app.include_router(loaders.router)
