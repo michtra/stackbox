@@ -2,3 +2,9 @@
 
 # dependencies
 /venv
+
+# pycache
+__pycache__/
+
+# test JSON files
+resources/*
