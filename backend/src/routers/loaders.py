@@ -1,23 +1,50 @@
-import shutil
-from fastapi import APIRouter, File, UploadFile, HTTPException
+from uuid import UUID
 
+from fastapi import APIRouter, File, UploadFile, HTTPException, Query
+
+from utilities.file_storage import save_upload
 from utilities.fileloader import excelLoader, stackplanLoader
 
 router = APIRouter()
 
 @router.post("/uploadfile")
-async def upload_context_file(type: str, file: UploadFile, floors: int | None = None):
-    """File uploader influenced by a different personal project of a team member (https://github.com/330i/llm-sandbox).
-    
-        file (UploadFile): Locally uploaded file. TODO: Change this to a S3 Bucket link.
+async def upload_context_file(
+    type: str,
+    file: UploadFile,
+    building_id: UUID = Query(..., alias="buildingId"),
+    floors: int | None = None,
+):
+    """Upload a file for processing and store it locally.
+
+    Args:
+        type: File type, either 'stl' or 'xlsx'.
+        file: The uploaded file.
+        building_id: UUID of the building this file belongs to.
+        floors: Number of floors (required for STL files).
     """
-    with open(f'./resources/{file.filename}', 'wb') as buffer:
-        shutil.copyfileobj(file.file, buffer)
+    if not file.filename:
+        raise HTTPException(400, detail="No filename provided.")
+
+    content = await file.read()
     file.file.close()
+
+    try:
+        metadata = save_upload(building_id, type, file.filename, content)
+    except ValueError as e:
+        raise HTTPException(400, detail=str(e))
+
+    saved_path = metadata["path"]
+
     if type == "stl":
-        stackplanLoader(f'./resources/{file.filename}', floors)
+        if floors is None:
+            raise HTTPException(400, detail="floors parameter is required for STL uploads.")
+        stackplanLoader(saved_path, floors, building_id)
     elif type == "xlsx":
-        excelLoader(f'./resources/{file.filename}')
+        excelLoader(saved_path)
     else:
-        raise HTTPException(500, detail=f'{file.filename} of {type} is not supported.')
-    raise HTTPException(200, detail=f'{file.filename} of size {file.size} uploaded.')
+        raise HTTPException(400, detail=f"File type '{type}' is not supported. Use 'stl' or 'xlsx'.")
+
+    return {
+        "detail": f"{file.filename} uploaded successfully.",
+        "file": metadata,
+    }

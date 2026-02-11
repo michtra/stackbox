@@ -3,8 +3,14 @@
 # dependencies
 /venv
 
+# environment
+.env
+
 # pycache
 __pycache__/
 
 # test JSON files
 resources/*
+
+# file uploads
+uploads/
