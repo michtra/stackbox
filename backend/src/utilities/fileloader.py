@@ -1,11 +1,11 @@
-import time
 import json
-from uuid import uuid4
+from uuid import uuid4, UUID
 from datetime import datetime
 
 import pandas as pd
 
 from utilities.floorplan import FloorGenerator
+from utilities.file_storage import save_processed_json
 
 
 def excelLoader(filepath: str) -> dict:
@@ -153,14 +153,15 @@ def excelLoader(filepath: str) -> dict:
     return stacking_plan
 
 
-def stackplanLoader(filepath, floors):
-    """Processes and loads STL files into a JSON file.
+def stackplanLoader(filepath, floors, building_id: UUID):
+    """Processes a 3D model file and saves extracted floor coordinates as JSON.
 
     Args:
-        filepath (str): Path to the 3D model.
-        floors (int): Number of floors the building has.
+        filepath: Path to the 3D model file.
+        floors: Number of floors the building has.
+        building_id: UUID of the building for organized storage.
     """
     stackingplan = FloorGenerator(filepath, floors)
     stackingplan.generateFloors()
-    with open(f'resources/{time.time_ns()}.json', 'w') as coordBuffer:
-        json.dump(stackingplan.getCoords(), coordBuffer)
+    data = json.dumps(stackingplan.getCoords())
+    save_processed_json(building_id, data)

@@ -73,6 +73,22 @@ class OccupancyModel(Base):
     floor = relationship("FloorModel", back_populates="occupancies")
     tenant = relationship("TenantModel", back_populates="occupancies")
 
+class FileModel(Base):
+    __tablename__ = "files"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    building_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("buildings.id"), nullable=False)
+    file_type: Mapped[str] = mapped_column(String, nullable=False)  # 'stl', 'excel', 'processed_json'
+    file_path: Mapped[str] = mapped_column(String, nullable=False)
+    original_filename: Mapped[str] = mapped_column(String, nullable=False)
+    file_size: Mapped[int] = mapped_column(Integer, nullable=False)
+    status: Mapped[str] = mapped_column(String, nullable=False, default="uploaded")  # 'uploaded', 'processing', 'completed', 'failed'
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
+    processed_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+
+    building = relationship("BuildingModel")
+
+
 class JobModel(Base):
     __tablename__ = "jobs"
 

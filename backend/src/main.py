@@ -14,8 +14,10 @@ from models import (
     StackingPlanResponse, StackingPlan,
     UploadJobResponse,
     Geometry, Address, BuildingMetadata, Location, PaginationMeta, Contact,
+    # FUTURE: S3 models - kept for when S3 upload flow is implemented
     PresignedUrlRequest, PresignedUrlResponse, ProcessSTLRequest, JobResponse, Job
 )
+from utilities.file_storage import save_upload
 from database import get_db
 from db_models import BuildingModel, TenantModel, FloorModel, OccupancyModel, GeometryModel
 from config import settings
@@ -88,76 +90,15 @@ def read_root():
 def read_item(item_id: int, q: Union[str, None] = None):
     return {"item_id": item_id, "q": q}
 
-# S3 Upload Endpoints
-@app.post("/api/v1/presigned-url", response_model=PresignedUrlResponse)
-def get_presigned_url(request: PresignedUrlRequest):
-    """Generate presigned S3 URL for direct client upload
+# FUTURE: S3 Upload Endpoints
+# These endpoints are placeholders for a future S3-based upload flow.
+# Currently all file uploads use local filesystem storage via /uploadfile
+# and /api/buildings/{id}/upload/* endpoints.
+# When S3 is implemented, add boto3 to requirements.txt and uncomment these.
 
-    - Client calls the endpoint with buildingId and fileName
-    - Backend generates temporary presigned URL
-    - Client uploads file directly to S3 using the presigned URL (PUT)
-    - Client calls POST /process-stl with s3Key for processing
-    """
-    # TODO: Implement S3 presigned URL generation
-    s3_key = f"uploads/{request.buildingId}/{request.fileName}"
-
-    # Construct S3 URL based on configuration
-    if settings.aws_endpoint_url:
-        # LocalStack or custom endpoint
-        base_url = f"{settings.aws_endpoint_url}/{settings.s3_bucket_name}"
-    else:
-        # Real AWS S3
-        base_url = f"https://{settings.s3_bucket_name}.s3.{settings.aws_region}.amazonaws.com"
-
-    return PresignedUrlResponse(
-        uploadUrl=f"{base_url}/{s3_key}?presigned",
-        s3Key=s3_key,
-        expiresIn=settings.presigned_url_expiration
-    )
-
-
-@app.post("/api/v1/process-stl", response_model=JobResponse)
-def process_stl(request: ProcessSTLRequest):
-    """Start async STL processing job
-
-    After uploading STL file to S3 via presigned URL, call this endpoint
-    to start processing. Returns job ID for status polling.
-
-    - This endpoint creates job record with status='pending'
-    - S3 event notification automatically sends message to SQS queue
-    - Worker polls SQS, picks up job, processes STL file
-    - Worker updates job status to 'completed' or 'failed'
-    - Client polls GET /jobs/{job_id} to check status
-    """
-    job_id = uuid4()
-
-    # TODO: Create job record in database
-    job = Job(
-        id=job_id,
-        buildingId=request.buildingId,
-        status="pending",
-        message="Job queued for processing",
-        result=None,
-        createdAt=datetime.utcnow(),
-        updatedAt=datetime.utcnow()
-    )
-    return JobResponse(data=job)
-
-
-@app.get("/api/v1/jobs/{job_id}", response_model=JobResponse)
-def get_job_status(job_id: UUID):
-    """Get job status and results
-
-    Poll this endpoint to check processing status:
-    - pending: Job waiting for worker
-    - processing: Worker is processing STL
-    - completed: Done. Check result field for floor polygons
-    - failed: Error occurred, check message field
-
-    Client should poll every 2-3 seconds until status is completed or failed.
-    """
-    # TODO: Fetch job from database
-    raise HTTPException(status_code=404, detail="Job not found")  # TODO
+# @app.post("/api/v1/presigned-url", response_model=PresignedUrlResponse)
+# @app.post("/api/v1/process-stl", response_model=JobResponse)
+# @app.get("/api/v1/jobs/{job_id}", response_model=JobResponse)
 
 # Buildings
 @app.get("/api/buildings", response_model=BuildingListResponse)
@@ -657,7 +598,7 @@ async def remove_occupancy(id: UUID, floorNumber: int, tenantId: UUID, db: Sessi
         )
     return None
 
-# File Uploads (deprecated - keeping for backwards compatibility)
+# File Uploads
 @app.post("/api/buildings/{id}/upload/stl", response_model=UploadJobResponse)
 async def upload_stl(
     id: UUID,
@@ -666,7 +607,7 @@ async def upload_stl(
     baseElevation: float = Form(...),
     db: Session = Depends(get_db)
 ):
-    """Upload 3D building model for floor geometry extraction (deprecated - use presigned URL endpoints)"""
+    """Upload 3D building model for floor geometry extraction"""
     db_building = db.query(BuildingModel).filter(BuildingModel.id == id).first()
 
     if not db_building:
@@ -681,12 +622,13 @@ async def upload_stl(
             detail = "Invalid file type. Only STL and GLB files are accepted"
         )
 
-    # TODO: Implement actual STL processing logic
-    # This would typically:
-    # 1. Save file to storage
-    # 2. Queue processing job
-    # 3. Extract floor geometries using floorHeight and baseElevation
-    # 4. Create Geometry records and link to floors
+    content = await file.read()
+    file.file.close()
+
+    try:
+        metadata = save_upload(id, "stl", file.filename, content)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
     import uuid
     job_id = str(uuid.uuid4())
@@ -694,7 +636,8 @@ async def upload_stl(
     return UploadJobResponse(data={
         "jobId": job_id,
         "status": "processing",
-        "message": f"Processing STL file for building {db_building.name}..."
+        "message": f"Processing STL file for building {db_building.name}...",
+        "filePath": metadata["path"],
     })
 
 @app.post("/api/buildings/{id}/upload/excel", response_model=UploadJobResponse)
@@ -714,12 +657,13 @@ async def upload_excel(id: UUID, file: UploadFile = File(...), db: Session = Dep
             detail = "Invalid file type. Only Excel (.xlsx) files are accepted"
         )
 
-    # TODO: Implement actual Excel processing logic
-    # This would typically:
-    # 1. Save file to storage
-    # 2. Parse Excel file
-    # 3. Extract tenant and occupancy data
-    # 4. Create/update tenant and occupancy records
+    content = await file.read()
+    file.file.close()
+
+    try:
+        metadata = save_upload(id, "excel", file.filename, content)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
     import uuid
     job_id = str(uuid.uuid4())
@@ -727,7 +671,8 @@ async def upload_excel(id: UUID, file: UploadFile = File(...), db: Session = Dep
     return UploadJobResponse(data={
         "jobId": job_id,
         "status": "processing",
-        "message": f"Processing Excel file for building {db_building.name}..."
+        "message": f"Processing Excel file for building {db_building.name}...",
+        "filePath": metadata["path"],
     })
 
 @app.get("/api/buildings/{id}/processing-status")
