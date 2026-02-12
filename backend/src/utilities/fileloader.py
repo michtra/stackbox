@@ -84,8 +84,10 @@ def excelLoader(filepath: str) -> dict:
 
     for _, row in data_rows.iterrows():
         floor_num = int(row.iloc[0])
+        room_num = int(row.iloc[1])
         tenant_name = str(row.iloc[2]).strip()
         sf = float(row.iloc[3]) if pd.notna(row.iloc[3]) else None
+        lease_type = str(row.iloc[5]).strip()
         lease_start = row.iloc[6]
         lease_end = row.iloc[7]
 
@@ -103,8 +105,11 @@ def excelLoader(filepath: str) -> dict:
 
         occupancy_rows.append({
             "floorNumber": floor_num,
+            "roomNumber": room_num,
             "tenantId": tenant_map[tenant_name],
             "squareFeet": sf,
+            "leaseType": lease_type,
+            "leaseStart": lease_start_str,
             "leaseStart": lease_start_str,
             "leaseEnd": lease_end_str,
         })
@@ -127,7 +132,9 @@ def excelLoader(filepath: str) -> dict:
         fn = occ["floorNumber"]
         floor_occupancies.setdefault(fn, []).append({
             "tenantId": occ["tenantId"],
+            "roomNumber": occ["roomNumber"],
             "squareFeet": occ["squareFeet"],
+            "leaseType": occ["leaseType"],
             "leaseStart": occ["leaseStart"],
             "leaseEnd": occ["leaseEnd"],
         })
