@@ -3,7 +3,7 @@ Pydantic models for Stackbox API
 """
 
 from datetime import datetime
-from typing import Optional, List
+from typing import Optional, List, Literal
 from uuid import UUID
 from pydantic import BaseModel, Field, EmailStr
 
@@ -91,20 +91,20 @@ class GeoJSONGeometry(BaseModel):
 
     Note: Coordinates use [longitude, latitude] order per RFC 7946
     """
-    type: str = Field(default="Polygon", const=True)
+    type: str = Literal["Polygon"]
     coordinates: List[List[List[float]]]
 
 
 class GeoJSONFeature(BaseModel):
     """GeoJSON Feature"""
-    type: str = Field(default="Feature", const=True)
+    type: str = Literal["Feature"]
     properties: dict
     geometry: GeoJSONGeometry
 
 
 class GeoJSONFeatureCollection(BaseModel):
     """GeoJSON FeatureCollection for floor geometry"""
-    type: str = Field(default="FeatureCollection", const=True)
+    type: str = Literal["FeatureCollection"]
     features: List[GeoJSONFeature]
 
 
