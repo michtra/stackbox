@@ -40,7 +40,12 @@ async def upload_context_file(
             raise HTTPException(400, detail="floors parameter is required for STL uploads.")
         stackplanLoader(saved_path, floors, building_id)
     elif type == "xlsx":
-        excelLoader(saved_path)
+        result = excelLoader(saved_path)
+        return {
+            "detail": f"{file.filename} uploaded and parsed successfully.",
+            "file": metadata,
+            "data": result,
+        }
     else:
         raise HTTPException(400, detail=f"File type '{type}' is not supported. Use 'stl' or 'xlsx'.")
 
