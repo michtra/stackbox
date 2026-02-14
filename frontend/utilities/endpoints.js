@@ -1,3 +1,4 @@
+"use client"
 
 /**
  * Uploads file to backend using the /uploadfile endpoint.

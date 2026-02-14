@@ -1,20 +1,16 @@
-'use client'
+"use client"
 
 import { useRef, useEffect } from 'react';
 import mapboxgl from 'mapbox-gl';
 
-import 'mapbox-gl/dist/mapbox-gl.css'
-
-import stacking from '../../test/stacking.json';
-
 /**
- * Finds point intersecting GeoJSON geometry side using line-line intersection calculation
+ * (Deprecated) Finds point intersecting GeoJSON geometry side using line-line intersection calculation
  * @param {float[]} centerCoord Center of floor plan
  * @param {float} percentCircle Value 0.0 to 1.0 representing percent of circle from 0 to 2*PI radians
  * @param {int} floorPlan Floor plan index of building from JSON
  * @returns List of length 2 with interesection point and larger index of endpoint if found, else null
  */
-function findIntersection(centerCoord, percentCircle, floorPlan) {
+function findIntersection(centerCoord, percentCircle, floorPlan, stacking) {
     // Margin of error else won't detect intersection of PI/2 multiples
     const marginOfError = 1e-10;
     const radialCoord = [Math.cos(2*Math.PI*percentCircle)+centerCoord[0], Math.sin(2*Math.PI*percentCircle)+centerCoord[1]]
@@ -50,13 +46,13 @@ function findIntersection(centerCoord, percentCircle, floorPlan) {
 }
 
 /**
- * Splits GeoJSON shape into pie slices and returns list of GeoJSON shapes
+ * (Deprecated) Splits GeoJSON shape into pie slices and returns list of GeoJSON shapes
  * @param {float[]} centerCoord Center of floor plan
  * @param {float[]} percentageList List of values from 0.0 to 1.0 that should add up 1.0
  * @param {*} floorPlan Floor plan index of building from JSON
  * @returns List of GeoJSON shapes radially split
  */
-function proportionGeojson(centerCoord, percentageList, floorPlan) {
+function proportionGeojson(centerCoord, percentageList, floorPlan, stacking) {
     var geoJsonList = [];
     var percentSum = 0.0;
 
@@ -77,9 +73,9 @@ function proportionGeojson(centerCoord, percentageList, floorPlan) {
     percentageList.forEach((percent) => {
         var geoJsonSlice = [];
 
-        var [lowerPercentInterPoint, lowerPercentInd] = findIntersection(centerCoord, percentSum, floorPlan);
+        var [lowerPercentInterPoint, lowerPercentInd] = findIntersection(centerCoord, percentSum, floorPlan, stacking);
         percentSum += percent;
-        var [higherPercentInterPoint, higherPercentInd] = findIntersection(centerCoord, percentSum, floorPlan);
+        var [higherPercentInterPoint, higherPercentInd] = findIntersection(centerCoord, percentSum, floorPlan, stacking);
 
         // Makes sure we add points in the same direction as GeoJSON shape
         if(isClockwise) {
@@ -104,31 +100,18 @@ function proportionGeojson(centerCoord, percentageList, floorPlan) {
     return geoJsonList;
 }
 
-export default function Page() {
+function Visualization({ stackingData }) {
     const mapRef = useRef();
     const mapContainerRef = useRef();
 
-    const buildingFloorHeight = stacking.height/stacking.floors;
+    const buildingFloorHeight = stackingData.height/stackingData.floors;
     const showInfo = (e) => {
-        const floor = e.features[0].properties.floor;
-        const vacancy = stacking.stackingplan[floor-1].reduce((a, e) => a-e[1], 1)*100;
-
-        floorPopup = new mapboxgl.Popup().setLngLat(e.lngLat).setHTML(`
-        <div class="min-w-52 text-black">
-            <div class="font-bold">Floor ${floor}</div>
-            <div class="text-lg">
-                ${stacking.stackingplan[floor-1].map(e => '<div>'+e[0]+' - '+(e[1]*100).toFixed(2)+'%</div>').join('')}
-                ${vacancy>0 ? '<div>Vacancy - '+vacancy.toFixed(2)+'%</div>' : ''}
-            </div>
-        </div>
-        `).addTo(mapRef.current);
+        console.log("Click!", e);
     }
-    
-    var floorPopup = new mapboxgl.Popup();
 
     useEffect(() => {
         var centerCoord = []
-        stacking.coordinates.forEach((floorPlan) => {
+        stackingData.coordinates.forEach((floorPlan) => {
             var maxCoord = [-Infinity, -Infinity];
             var minCoord = [Infinity, Infinity];
             floorPlan.forEach((e) => {
@@ -150,10 +133,10 @@ export default function Page() {
 
         var jasons = [];
         var stackingPlanIndex;
-        [...Array(stacking.floors).keys()].forEach(e => {
+        [...Array(stackingData.floors).keys()].forEach(e => {
             var vacancy = 1.0;
             var percentageList = [];
-            stacking.stackingplan[e].forEach((tenant) => {
+            stackingData.stackingplan[e].forEach((tenant) => {
                 percentageList.push(tenant[1]);
                 vacancy -= tenant[1];
             });
@@ -161,7 +144,7 @@ export default function Page() {
                 percentageList.push(vacancy);
             }
 
-            stackingPlanIndex = stacking.coordinatefloors.findIndex(floor => e+1<=floor);
+            stackingPlanIndex = stackingData.coordinatefloors.findIndex(floor => e+1<=floor);
             
             // Prevents unnecessary slicing computations for 0 or 1 tenant floors
             if(percentageList.length<=1) {
@@ -171,25 +154,25 @@ export default function Page() {
                         'floor': e+1,
                         'height': (e+1)*buildingFloorHeight, // I think this is in meters
                         'base_height': e*buildingFloorHeight + 0.5, // Removes bottom, doesn't move it up
-                        'color': stacking.stackingplan[e].length ? stacking.tenants[stacking.stackingplan[e][0][0]].color : '#ffffff'
+                        'color': stackingData.stackingplan[e].length ? stackingData.tenants[stackingData.stackingplan[e][0][0]].color : '#ffffff'
                     },
                     'geometry': {
                         'coordinates': [
-                            stacking.coordinates[stackingPlanIndex]
+                            stackingData.coordinates[stackingPlanIndex]
                         ],
                         'type': 'Polygon'
                     }
                 });
             }
             else {
-                proportionGeojson(centerCoord[stackingPlanIndex], percentageList, stackingPlanIndex).forEach((geoJsonSlice, tenantInd) => {
+                proportionGeojson(centerCoord[stackingPlanIndex], percentageList, stackingPlanIndex, stackingData).forEach((geoJsonSlice, tenantInd) => {
                     jasons.push({
                         'type': 'Feature',
                         'properties': {
                             'floor': e+1,
                             'height': (e+1)*buildingFloorHeight,
                             'base_height': e*buildingFloorHeight + 0.5,
-                            'color': vacancy!==0.0 && tenantInd===percentageList.length-1 ? '#ffffff' : stacking.tenants[stacking.stackingplan[e][tenantInd][0]].color
+                            'color': vacancy!==0.0 && tenantInd===percentageList.length-1 ? '#ffffff' : stackingData.tenants[stackingData.stackingplan[e][tenantInd][0]].color
                         },
                         'geometry': {
                             'coordinates': [
@@ -206,14 +189,14 @@ export default function Page() {
         jasons.push({
             'type': 'Feature',
             'properties': {
-                'floor': stacking.floors,
-                'height': stacking.floors*buildingFloorHeight + 1,
-                'base_height': stacking.floors*buildingFloorHeight + 0.5,
+                'floor': stackingData.floors,
+                'height': stackingData.floors*buildingFloorHeight + 1,
+                'base_height': stackingData.floors*buildingFloorHeight + 0.5,
                 'color': '#ffffff'
             },
             'geometry': {
                 'coordinates': [
-                    stacking.coordinates[stackingPlanIndex]
+                    stackingData.coordinates[stackingPlanIndex]
                 ],
                 'type': 'Polygon'
             }
@@ -260,3 +243,5 @@ export default function Page() {
         </div>
     );
 }
+
+export { Visualization };

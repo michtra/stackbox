@@ -1,3 +1,4 @@
+"use client"
 
 /**
  * Perimeter-based proportioning method for tenant relative proportion visualization.

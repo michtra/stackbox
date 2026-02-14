@@ -29,6 +29,11 @@ class Settings(BaseSettings):
         case_sensitive=False,
         extra="ignore"
     )
+    
+    # Cross-Origin Resource Sharing (CORS) settings
+    cors_origins: list[str] = [
+        "http://localhost:3000",  # Next.js development server
+    ]
 
 
 # Global settings instance
