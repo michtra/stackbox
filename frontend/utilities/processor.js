@@ -9,7 +9,7 @@
  * @param {float} buildingFloorHeightMin Minimum height of floor. Determines base height of extrusion. Added for future flexibility.
  * @param {float} buildingFloorHeightMax Maximum height of floor. Determines roof of floor extrusion. Added for future flexibility.
  * @param {float} wallThickness Thickness of the wall (default is 1e-6 which is like a third of a foot (approximately)).
- * @returns List of GeoJSON Features representing an extrusion of the tenant's wall.
+ * @returns List of GeoJSON Features representing an extrusion of the tenant"s wall.
  */
 function proportionWall(floorPlanShapes, tenantList, totalSF, floorNum, buildingFloorHeightMin, buildingFloorHeightMax, wallThickness=1e-6) {
     if(Object.keys(tenantList).length === 0) {
@@ -55,13 +55,9 @@ function proportionWall(floorPlanShapes, tenantList, totalSF, floorNum, building
             edgeLengths[shapeIndex][i] = (i === 1 ? 0 : edgeLengthPrev) + edgeLengths[shapeIndex][i-1];
             // Using right hand normal for offset direction
             edgeOffsets[shapeIndex][i] = [-((edgeYPrev / edgeLengthPrev) + (edgeY / edgeLength)) * wallThickness, ((edgeXPrev / edgeLengthPrev) + (edgeX / edgeLength)) * wallThickness];
-            if(i === shape.length - 1) {
-                console.log(i, edgeYPrev, edgeXPrev, edgeLengthPrev, edgeY, edgeX, edgeLength, ((edgeYPrev / edgeLengthPrev) + (edgeY / edgeLength)) * wallThickness, -((edgeXPrev / edgeLengthPrev) + (edgeX / edgeLength)) * wallThickness);
-            }
         }
         edgeOffsets[shapeIndex][0] = edgeOffsets[shapeIndex][edgeOffsets[shapeIndex].length - 1];
     });
-    console.log(edgeOffsets);
 
     /*
     Calculating cumulative tenant wall lengths based on their square footage proportion.
@@ -213,7 +209,7 @@ function proportionWall(floorPlanShapes, tenantList, totalSF, floorNum, building
 /**
  * Proportioning all floors. Assumes JSON has data for each floors.
  * @param {Object} stackingData JSON data from building data retrieval endpoint. Requires tenant and floor data. See schema for details.
- * @returns List of GeoJSON Features representing an extrusion of the tenant's wall for all floors.
+ * @returns List of GeoJSON Features representing an extrusion of the tenant"s wall for all floors.
  */
 function proportionBuilding(stackingData) {
     const floorPlanShapesList = stackingData["geometries"];
@@ -249,15 +245,15 @@ function proportionBuilding(stackingData) {
     }
 
     const geoJSONFeatures = {
-        'type': 'geojson',
-        'data': {
-            'type': 'FeatureCollection',
-            'features': []
+        "type": "geojson",
+        "data": {
+            "type": "FeatureCollection",
+            "features": []
         }
     };
 
     for(let i = 0; i < stackingData["building"]["metadata"]["totalFloors"]; i++) {
-        geoJSONFeatures['data']['features'].push(...proportionWall(floorPlanShapesList[i], tenantList[i], totalSFList[i], i + 1, buildingFloorHeightMinList[i], buildingFloorHeightMaxList[i]));
+        geoJSONFeatures["data"]["features"].push(...proportionWall(floorPlanShapesList[i], tenantList[i], totalSFList[i], i + 1, buildingFloorHeightMinList[i], buildingFloorHeightMaxList[i]));
     }
     return geoJSONFeatures;
 }
