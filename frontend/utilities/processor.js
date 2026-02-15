@@ -46,18 +46,22 @@ function proportionWall(floorPlanShapes, tenantList, totalSF, floorNum, building
             edgeLengths[shapeIndex][0] = edgeLengths[shapeIndex-1].at(-1);
         }
         [edgeX, edgeY] = [shape[1][0] - shape[0][0], shape[1][1] - shape[0][1]];
-        edgeLength = Math.sqrt(Math.pow(edgeXPrev, 2) + Math.pow(edgeYPrev, 2));
+        edgeLength = Math.sqrt(Math.pow(edgeX, 2) + Math.pow(edgeY, 2));
         for(let i = 1; i < shape.length; i++) {
             [edgeXPrev, edgeYPrev] = [edgeX, edgeY];
-            [edgeX, edgeY] = [shape[(i+1) % shape.length][0] - shape[i][0], shape[(i+1) % shape.length][1] - shape[i][1]];
             edgeLengthPrev = edgeLength;
+            [edgeX, edgeY] = [shape[i === shape.length - 1 ? 1 : (i+1)][0] - shape[i][0], shape[i === shape.length - 1 ? 1 : (i+1)][1] - shape[i][1]];
             edgeLength = Math.sqrt(Math.pow(edgeX, 2) + Math.pow(edgeY, 2));
-            edgeLengths[shapeIndex][i] = edgeLengthPrev + edgeLengths[shapeIndex][i-1];
+            edgeLengths[shapeIndex][i] = (i === 1 ? 0 : edgeLengthPrev) + edgeLengths[shapeIndex][i-1];
             // Using right hand normal for offset direction
-            edgeOffsets[shapeIndex][i-1] = [(edgeYPrev + edgeY) / (edgeLengthPrev + edgeLength) * wallThickness, -(edgeXPrev + edgeX) / (edgeLengthPrev + edgeLength) * wallThickness];
+            edgeOffsets[shapeIndex][i] = [-((edgeYPrev / edgeLengthPrev) + (edgeY / edgeLength)) * wallThickness, ((edgeXPrev / edgeLengthPrev) + (edgeX / edgeLength)) * wallThickness];
+            if(i === shape.length - 1) {
+                console.log(i, edgeYPrev, edgeXPrev, edgeLengthPrev, edgeY, edgeX, edgeLength, ((edgeYPrev / edgeLengthPrev) + (edgeY / edgeLength)) * wallThickness, -((edgeXPrev / edgeLengthPrev) + (edgeX / edgeLength)) * wallThickness);
+            }
         }
-        edgeOffsets[shapeIndex][edgeOffsets[shapeIndex].length - 1] = edgeOffsets[shapeIndex][0];
+        edgeOffsets[shapeIndex][0] = edgeOffsets[shapeIndex][edgeOffsets[shapeIndex].length - 1];
     });
+    console.log(edgeOffsets);
 
     /*
     Calculating cumulative tenant wall lengths based on their square footage proportion.
@@ -203,7 +207,6 @@ function proportionWall(floorPlanShapes, tenantList, totalSF, floorNum, building
             }
         });
     });
-    console.log(tenantGeoJSONFeatures);
     return tenantGeoJSONFeatures;
 }
 
@@ -226,7 +229,6 @@ function proportionBuilding(stackingData) {
     stackingData["floors"].forEach((floorData) => {
         tenantList[floorData["floorNumber"] - 1] = {};
         floorData["occupancies"].forEach((occupancyData) => {
-            console.log(occupancyData);
             tenantList[floorData["floorNumber"] - 1][`${occupancyData["tenantId"]}`] = {
                 "sf": occupancyData["squareFeet"]["parsedValue"],
                 "color": tenantObject[occupancyData["tenantId"]]["color"]
@@ -256,7 +258,6 @@ function proportionBuilding(stackingData) {
 
     for(let i = 0; i < stackingData["building"]["metadata"]["totalFloors"]; i++) {
         geoJSONFeatures['data']['features'].push(...proportionWall(floorPlanShapesList[i], tenantList[i], totalSFList[i], i + 1, buildingFloorHeightMinList[i], buildingFloorHeightMaxList[i]));
-        console.log(`Finished processing floor ${i + 1}`);
     }
     return geoJSONFeatures;
 }
