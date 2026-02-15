@@ -5,10 +5,10 @@ import mapboxgl from 'mapbox-gl';
 
 import 'mapbox-gl/dist/mapbox-gl.css'
 
-import stacking from '../../test/stacking.json';
+import stacking from '../../test/stacking-legacy.json';
 
 /**
- * Finds point intersecting GeoJSON geometry side using line-line intersection calculation
+ * (Deprecated) Finds point intersecting GeoJSON geometry side using line-line intersection calculation
  * @param {float[]} centerCoord Center of floor plan
  * @param {float} percentCircle Value 0.0 to 1.0 representing percent of circle from 0 to 2*PI radians
  * @param {int} floorPlan Floor plan index of building from JSON
@@ -50,7 +50,7 @@ function findIntersection(centerCoord, percentCircle, floorPlan) {
 }
 
 /**
- * Splits GeoJSON shape into pie slices and returns list of GeoJSON shapes
+ * (Deprecated) Splits GeoJSON shape into pie slices and returns list of GeoJSON shapes
  * @param {float[]} centerCoord Center of floor plan
  * @param {float[]} percentageList List of values from 0.0 to 1.0 that should add up 1.0
  * @param {*} floorPlan Floor plan index of building from JSON

@@ -2,29 +2,30 @@
 
 /**
  * Perimeter-based proportioning method for tenant relative proportion visualization.
- * @param {float[][]} floorPlanShapes List of floor plan shapes (made of lat-lng coordinates) for single floor
- * @param {Object} tenantList List of square footage of each tenant (key: tenant name, value: { sf: square footage, color: HEX color } )
- * @param {float} totalSF Total square footage of the floor
- * @param {number} floorNum Floor number (used for determining extrusion height, starts at 1)
- * @param {float} buildingFloorHeight Height of each floor in the building (used for determining extrusion height)
- * @param {float} wallThickness Thickness of the "wall" (default is 1e-6 which is like a third of a foot (approximately))
- * @returns List of GeoJSON Features representing an extrusion of the tenant's "wall"
+ * @param {float[][]} floorPlanShapes List of floor plan shapes (made of lat-lng coordinates) for single floor.
+ * @param {Object} tenantList List of square footage of each tenant (key: tenant UUID, value: { sf: square footage, color: HEX color } ).
+ * @param {float} totalSF Total square footage of the floor.
+ * @param {number} floorNum Floor number (used for determining extrusion height, starts at 1).
+ * @param {float} buildingFloorHeightMin Minimum height of floor. Determines base height of extrusion. Added for future flexibility.
+ * @param {float} buildingFloorHeightMax Maximum height of floor. Determines roof of floor extrusion. Added for future flexibility.
+ * @param {float} wallThickness Thickness of the wall (default is 1e-6 which is like a third of a foot (approximately)).
+ * @returns List of GeoJSON Features representing an extrusion of the tenant's wall.
  */
-function proportionWall(floorPlanShapes, tenantList, totalSF, floorNum, buildingFloorHeight, wallThickness=1e-6) {
+function proportionWall(floorPlanShapes, tenantList, totalSF, floorNum, buildingFloorHeightMin, buildingFloorHeightMax, wallThickness=1e-6) {
     if(Object.keys(tenantList).length === 0) {
         return floorPlanShapes.map((shape) => {
             return {
-                'type': 'Feature',
-                'properties': {
-                    'floor': floorNum,
-                    'height': floorNum*buildingFloorHeight,
-                    'base_height': (floorNum-1)*buildingFloorHeight + 0.5,
-                    'color': '#ffffff',
-                    'tenant': 'Vacancy'
+                "type": "Feature",
+                "properties": {
+                    "floor": floorNum,
+                    "height": buildingFloorHeightMax - 0.5,
+                    "base_height": buildingFloorHeightMin,
+                    "color": "#ffffff",
+                    "tenant": "Vacancy"
                 },
-                'geometry': {
-                    'type': 'Polygon',
-                    'coordinates': [shape]
+                "geometry": {
+                    "type": "Polygon",
+                    "coordinates": [shape]
                 }
             };
         });
@@ -34,43 +35,52 @@ function proportionWall(floorPlanShapes, tenantList, totalSF, floorNum, building
     const edgeOffsets = floorPlanShapes.map((shape) => Array(shape.length).fill([0, 0]));
     /*
     Calculating cumulative edge lengths for each shape to determine where tenant boundaries should be placed based on their square footage proportion.
-    Also calculates edge offset vector for pushing the lines inwards and outwards for wall shape.
+    Also calculates edge offset vector for pushing the lines inwards and outwards for wall shape. Done by calculating normal vector of the two surrounding edges and adding them together.
     */
-    let edgeLength = 0;
+    let [edgeXPrev, edgeYPrev] = [0, 0];
     let [edgeX, edgeY] = [0, 0];
+    let edgeLengthPrev = 0;
+    let edgeLength = 0;
     floorPlanShapes.forEach((shape, shapeIndex) => {
         if(shapeIndex > 0) {
             edgeLengths[shapeIndex][0] = edgeLengths[shapeIndex-1].at(-1);
         }
+        [edgeX, edgeY] = [shape[1][0] - shape[0][0], shape[1][1] - shape[0][1]];
+        edgeLength = Math.sqrt(Math.pow(edgeXPrev, 2) + Math.pow(edgeYPrev, 2));
         for(let i = 1; i < shape.length; i++) {
-            [edgeX, edgeY] = [shape[i][0] - shape[i-1][0], shape[i][1] - shape[i-1][1]];
+            [edgeXPrev, edgeYPrev] = [edgeX, edgeY];
+            [edgeX, edgeY] = [shape[(i+1) % shape.length][0] - shape[i][0], shape[(i+1) % shape.length][1] - shape[i][1]];
+            edgeLengthPrev = edgeLength;
             edgeLength = Math.sqrt(Math.pow(edgeX, 2) + Math.pow(edgeY, 2));
-            edgeLengths[shapeIndex][i] = edgeLength + edgeLengths[shapeIndex][i-1];
+            edgeLengths[shapeIndex][i] = edgeLengthPrev + edgeLengths[shapeIndex][i-1];
             // Using right hand normal for offset direction
-            edgeOffsets[shapeIndex][i-1] = [edgeY / edgeLength * wallThickness, -edgeX / edgeLength * wallThickness];
+            edgeOffsets[shapeIndex][i-1] = [(edgeYPrev + edgeY) / (edgeLengthPrev + edgeLength) * wallThickness, -(edgeXPrev + edgeX) / (edgeLengthPrev + edgeLength) * wallThickness];
         }
         edgeOffsets[shapeIndex][edgeOffsets[shapeIndex].length - 1] = edgeOffsets[shapeIndex][0];
     });
 
     /*
-    Calculating cumulative tenant "wall" lengths based on their square footage proportion.
+    Calculating cumulative tenant wall lengths based on their square footage proportion.
     */
-    const tenantWallLengths = Array(Object.keys(tenantList).length).fill(0);
-    Object.entries(tenantList).forEach(([tenant, tenantInfo]) => {
-        tenantWallLengths.push([tenant, tenantInfo['sf'] / totalSF * edgeLengths.at(-1).at(-1) + tenantWallLengths.at(-1)])
+    const tenantWallLengths = Array(Object.keys(tenantList).length).fill([0, 0]);
+    Object.entries(tenantList).forEach(([tenant, tenantInfo], tenantIndex) => {
+        tenantWallLengths[tenantIndex] = [tenant, edgeLengths.at(-1).at(-1) * tenantInfo["sf"] / totalSF + (tenantIndex === 0 ? 0 : tenantWallLengths[tenantIndex - 1][1])];
     });
+    if(tenantWallLengths.at(-1)[1] < edgeLengths.at(-1).at(-1)) {
+        tenantWallLengths.push(["Vacancy", edgeLengths.at(-1).at(-1)]);
+    }
 
     /*
     Using binary search to find the tenant wall ends.
     */
-    currShapeIndex = 0;
+    let currShapeIndex = 0;
     // Tenant position array, stores [shape index, edge index, proportion within edge after edge index].
     const tenantPositions = Array(Object.keys(tenantList).length).fill(["", 0, 0, 0]);
     tenantWallLengths.forEach(([tenant, wallPosition], tenantIndex) => {
         while(wallPosition > edgeLengths[currShapeIndex].at(-1)) {
             currShapeIndex++;
         }
-        let [low, high] = [0, edgeLengths[currShapeIndex].length - 1];
+        let [low, high, mid] = [0, edgeLengths[currShapeIndex].length - 1, 0];
         while(low < high) {
             mid = Math.floor((low + high) / 2);
             if(edgeLengths[currShapeIndex][mid] < wallPosition) {
@@ -85,9 +95,9 @@ function proportionWall(floorPlanShapes, tenantList, totalSF, floorNum, building
     /*
     Generating GeoJSON Feature for each tenant wall.
     Separates shapes if there are multiple.
-    Creates "wall" shape using wall coordinates and reverse of wall coordinates with offset.
+    Creates wall shape using wall coordinates and reverse of wall coordinates with offset.
     */
-    tenantGeoJSONFeatures = [];
+    let tenantGeoJSONFeatures = [];
     tenantPositions.forEach(([tenant, shapeIndex, edgeIndex, edgeProportion], tenantIndex) => {
         const [prevShapeIndex, prevEdgeIndex, prevEdgeProportion] = tenantIndex === 0 ? [0, 0, 0] : [tenantPositions[tenantIndex - 1][1], tenantPositions[tenantIndex - 1][2], tenantPositions[tenantIndex - 1][3]];
         const tenantWallCoordinates = [
@@ -157,22 +167,112 @@ function proportionWall(floorPlanShapes, tenantList, totalSF, floorNum, building
 
         tenantWallCoordinates.forEach((wall, wallIndex) => {
             tenantGeoJSONFeatures.push({
-                'type': 'Feature',
-                'properties': {
-                    'floor': floorNum,
-                    'height': floorNum*buildingFloorHeight,
-                    'base_height': (floorNum-1)*buildingFloorHeight + 0.5,
-                    'color': tenantList[tenant]['color'],
-                    'tenant': tenant
+                "type": "Feature",
+                "properties": {
+                    "floor": floorNum,
+                    "height": buildingFloorHeightMax - 0.5,
+                    "base_height": buildingFloorHeightMin,
+                    "color": tenant !== "Vacancy" ? tenantList[tenant]["color"] : "#ffffff", // TODO: Implement color system
+                    "tenant": tenant
                 },
-                'geometry': {
-                    'coordinates': [
-                        ...wall,
-                        ...tenantWallCoordinatesOffset[wallIndex].reverse()
+                "geometry": {
+                    "coordinates": [
+                        [
+                            ...wall,
+                            ...tenantWallCoordinatesOffset[wallIndex].reverse(),
+                            wall[0]
+                        ]
                     ],
-                    'type': 'Polygon'
+                    "type": "Polygon"
                 }
             });
         });
     });
+    floorPlanShapes.map((shape) => {
+        tenantGeoJSONFeatures.push({
+            "type": "Feature",
+            "properties": {
+                "floor": floorNum,
+                "height": buildingFloorHeightMax - 0.4,
+                "base_height": buildingFloorHeightMax - 0.5,
+                "color": "#ffffff",
+            },
+            "geometry": {
+                "type": "Polygon",
+                "coordinates": [shape]
+            }
+        });
+    });
+    console.log(tenantGeoJSONFeatures);
+    return tenantGeoJSONFeatures;
 }
+
+/**
+ * Proportioning all floors. Assumes JSON has data for each floors.
+ * @param {Object} stackingData JSON data from building data retrieval endpoint. Requires tenant and floor data. See schema for details.
+ * @returns List of GeoJSON Features representing an extrusion of the tenant's wall for all floors.
+ */
+function proportionBuilding(stackingData) {
+    const floorPlanShapesList = stackingData["geometries"];
+    const tenantList = Array(Object.keys(stackingData["floors"]).length);
+    const totalSFList = Array(Object.keys(stackingData["floors"]).length).fill(0);
+    const buildingFloorHeightMinList = Array(Object.keys(stackingData["floors"]).length).fill(0);
+    const buildingFloorHeightMaxList = Array(Object.keys(stackingData["floors"]).length).fill(0);
+
+    /*
+    Extracting tenant and floor data from JSON for each floor.
+    */
+    const tenantObject = tenantJSONToObject(stackingData["tenants"]);
+    stackingData["floors"].forEach((floorData) => {
+        tenantList[floorData["floorNumber"] - 1] = {};
+        floorData["occupancies"].forEach((occupancyData) => {
+            console.log(occupancyData);
+            tenantList[floorData["floorNumber"] - 1][`${occupancyData["tenantId"]}`] = {
+                "sf": occupancyData["squareFeet"]["parsedValue"],
+                "color": tenantObject[occupancyData["tenantId"]]["color"]
+            };
+        });
+        totalSFList[floorData["floorNumber"] - 1] = floorData["squareFeet"]["parsedValue"];
+    });
+
+    /*
+    Calculating base and roof heights for each floor.
+    */
+    const buildingFloorHeight = stackingData["building"]["metadata"]["heightMeters"]["parsedValue"] / stackingData["building"]["metadata"]["totalFloors"];
+    let currHeight = 0;
+    for(let i = 0; i < buildingFloorHeightMinList.length; i++) {
+        buildingFloorHeightMinList[i] = currHeight;
+        currHeight += buildingFloorHeight;
+        buildingFloorHeightMaxList[i] = currHeight;
+    }
+
+    const geoJSONFeatures = {
+        'type': 'geojson',
+        'data': {
+            'type': 'FeatureCollection',
+            'features': []
+        }
+    };
+
+    for(let i = 0; i < stackingData["building"]["metadata"]["totalFloors"]; i++) {
+        geoJSONFeatures['data']['features'].push(...proportionWall(floorPlanShapesList[i], tenantList[i], totalSFList[i], i + 1, buildingFloorHeightMinList[i], buildingFloorHeightMaxList[i]));
+        console.log(`Finished processing floor ${i + 1}`);
+    }
+    return geoJSONFeatures;
+}
+
+function tenantJSONToObject(tenantJSON) {
+    let tenantObject = {};
+    tenantJSON.forEach((tenant) => {
+        tenantObject[tenant["id"]] = {
+            "name": tenant["name"],
+            "color": tenant["color"],
+            "contact": tenant["contact"],
+            "createdAt": tenant["createdAt"],
+            "updatedAt": tenant["updatedAt"]
+        };
+    });
+    return tenantObject;
+}
+
+export { proportionBuilding };

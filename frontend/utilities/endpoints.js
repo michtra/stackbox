@@ -2,11 +2,11 @@
 
 /**
  * Uploads file to backend using the /uploadfile endpoint.
- * @param {File} file File object to be uploaded
- * @param {string} type Type of file being uploaded (e.g. 'stl', 'xlsx')
- * @param {string} buildingId Building ID to associate the file with
- * @param {number|null} floors Optional number of floors to associate with the file (only applicable for model files)
- * @returns File metadata (and data if applicable)
+ * @param {File} file File object to be uploaded.
+ * @param {string} type Type of file being uploaded (e.g. 'stl', 'xlsx').
+ * @param {string} buildingId Building ID to associate the file with.
+ * @param {number|null} floors Optional number of floors to associate with the file (only applicable for model files).
+ * @returns File metadata (and data if applicable).
  */
 async function uploadFile(file, type, buildingId, floors = null) {
     const formData = new FormData();
@@ -18,4 +18,4 @@ async function uploadFile(file, type, buildingId, floors = null) {
     return response;
 }
 
-export { uploadFile }
+export { uploadFile };
