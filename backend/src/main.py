@@ -22,6 +22,7 @@ from database import get_db
 from db_models import BuildingModel, TenantModel, FloorModel, OccupancyModel, GeometryModel
 from config import settings
 from routers import loaders
+from utilities.floorplan import FloorGenerator
 
 app = FastAPI(title="Stackbox API")
 
@@ -605,6 +606,10 @@ async def upload_stl(
     file: UploadFile = File(...),
     floorHeight: float = Form(...),
     baseElevation: float = Form(...),
+    centerX: Optional[float] = Form(None),
+    centerY: Optional[float] = Form(None),
+    scale: float = Form(1.0),
+    rotation: float = Form(0.0),
     db: Session = Depends(get_db)
 ):
     """Upload 3D building model for floor geometry extraction"""
@@ -627,6 +632,18 @@ async def upload_stl(
 
     try:
         metadata = save_upload(id, "stl", file.filename, content)
+        
+        center = (centerX, centerY) if centerX is not None and centerY is not None else None
+        
+        generator = FloorGenerator(
+            model=metadata["path"],
+            floors=db_building.total_floors,
+            base_elevation=baseElevation,
+            center=center,
+            scale=scale,
+            rotation=rotation
+        )
+        generator.generateFloors()
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
