@@ -356,7 +356,7 @@ export default function Home() {
     }, [activeTab]);
 
     return (
-        <div className='h-screen overflow-hidden' style={{ backgroundColor: isDarkMode ? '#0f172a' : '#ffffff' }}>
+        <div className='w-full min-h-screen flex flex-col overflow-hidden' style={{ backgroundColor: isDarkMode ? '#0f172a' : '#ffffff', minHeight: '100dvh' }}>
             <div className="flex border-b z-10 relative" style={{ backgroundColor: isDarkMode ? '#1e293b' : '#ffffff', borderColor: isDarkMode ? '#334155' : '#e5e7eb' }}>
                 <button
                     onClick={() => setActiveTab('map')}
@@ -403,9 +403,9 @@ export default function Home() {
                     )}
                 </button>
             </div>
-            {activeTab === 'map' && <div id='map-container' ref={mapContainerRef} className='w-screen h-full'></div>}
+            {activeTab === 'map' && <div id='map-container' ref={mapContainerRef} className='w-full flex-1 min-h-0'></div>}
             {activeTab === 'charts' && (
-                <div className='w-screen h-full flex flex-col' style={{ 
+                <div className='w-full flex-1 min-h-0 flex flex-col' style={{ 
                     background: isDarkMode ? 'linear-gradient(to bottom right, #0f172a, #1e293b)' : 'linear-gradient(to bottom right, #f9fafb, #ffffff)'
                 }}>
                     <div className="flex border-b shadow-sm" style={{ 
@@ -433,9 +433,9 @@ export default function Home() {
                             By Floor
                         </button>
                     </div>
-                    <div className="flex-1 overflow-auto">
+                    <div className="flex-1 min-h-0 overflow-auto px-2 md:px-0">
                         {chartTab === 'pie' && (
-                            <div ref={pieChartRef} className="h-full p-8">
+                            <div ref={pieChartRef} className="min-h-full p-6 md:p-8">
                                 <div className="max-w-6xl mx-auto rounded-xl shadow-lg p-8 h-full flex flex-col" style={{ 
                                     backgroundColor: isDarkMode ? '#1e293b' : '#ffffff'
                                 }}>
@@ -456,8 +456,8 @@ export default function Home() {
                             </div>
                         )}
                         {chartTab === 'floor' && (
-                            <div ref={floorChartRef} className="h-full p-8">
-                                <div className="max-w-6xl mx-auto rounded-xl shadow-lg p-8" style={{ 
+                            <div ref={floorChartRef} className="min-h-full p-6 md:p-8">
+                                <div className="max-w-6xl mx-auto rounded-xl shadow-lg p-8 overflow-x-auto" style={{ 
                                     backgroundColor: isDarkMode ? '#1e293b' : '#ffffff'
                                 }}>
                                     <div className="mb-6">
@@ -477,7 +477,7 @@ export default function Home() {
                             </div>
                         )}
                     </div>
-                    <div className="px-8 py-4 border-t shadow-lg" style={{ 
+                    <div className="shrink-0 px-6 md:px-8 py-4 border-t shadow-lg" style={{ 
                         backgroundColor: isDarkMode ? '#1e293b' : '#ffffff',
                         borderColor: isDarkMode ? '#334155' : '#e5e7eb'
                     }}>
@@ -497,3 +497,4 @@ export default function Home() {
         </div>
     );
 }
+
