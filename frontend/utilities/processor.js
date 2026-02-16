@@ -89,7 +89,7 @@ function proportionWall(floorPlanShapes, tenantList, totalSF, floorNum, building
                 high = mid;
             }
         }
-        tenantPositions[tenantIndex] = [tenant, currShapeIndex, low - 1, (wallPosition - edgeLengths[currShapeIndex][low-1]) / (edgeLengths[currShapeIndex][low] - edgeLengths[currShapeIndex][low-1])];
+        tenantPositions[tenantIndex] = [tenant, currShapeIndex, low <= 0 ? 0 : low - 1, (wallPosition - edgeLengths[currShapeIndex][low-1]) / (edgeLengths[currShapeIndex][low] - edgeLengths[currShapeIndex][low-1])];
     });
 
     /*
