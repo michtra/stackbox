@@ -1,6 +1,7 @@
 from typing import Optional, List, Union, cast
 from uuid import UUID, uuid4
 from fastapi import Depends, FastAPI, HTTPException, Query, Path, UploadFile, File, Form, status
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from datetime import datetime
@@ -25,6 +26,11 @@ from routers import loaders
 from utilities.floorplan import FloorGenerator
 
 app = FastAPI(title="Stackbox API")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.cors_origins,
+)
 
 def db_building_to_pydantic(db_building: BuildingModel) -> Building:
     """Converting database building model to Pydantic model"""

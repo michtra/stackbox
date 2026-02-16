@@ -1,13 +1,13 @@
 from uuid import UUID
 
-from fastapi import APIRouter, File, UploadFile, HTTPException, Query
+from fastapi import APIRouter, File, UploadFile, HTTPException, Query, status
 
 from utilities.file_storage import save_upload
 from utilities.fileloader import excelLoader, stackplanLoader
 
 router = APIRouter()
 
-@router.post("/uploadfile")
+@router.post("/uploadfile", status_code=status.HTTP_201_CREATED)
 async def upload_context_file(
     type: str,
     file: UploadFile,
