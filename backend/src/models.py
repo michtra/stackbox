@@ -3,7 +3,7 @@ Pydantic models for Stackbox API
 """
 
 from datetime import datetime
-from typing import Optional, List
+from typing import Optional, List, Literal
 from uuid import UUID
 from pydantic import BaseModel, Field, EmailStr
 
@@ -91,20 +91,20 @@ class GeoJSONGeometry(BaseModel):
 
     Note: Coordinates use [longitude, latitude] order per RFC 7946
     """
-    type: str = Field(default="Polygon", const=True)
+    type: str = Literal["Polygon"]
     coordinates: List[List[List[float]]]
 
 
 class GeoJSONFeature(BaseModel):
     """GeoJSON Feature"""
-    type: str = Field(default="Feature", const=True)
+    type: str = Literal["Feature"]
     properties: dict
     geometry: GeoJSONGeometry
 
 
 class GeoJSONFeatureCollection(BaseModel):
     """GeoJSON FeatureCollection for floor geometry"""
-    type: str = Field(default="FeatureCollection", const=True)
+    type: str = Literal["FeatureCollection"]
     features: List[GeoJSONFeature]
 
 
@@ -245,3 +245,67 @@ class STLUploadRequest(BaseModel):
     """Request model for file upload"""
     floorHeight: float = Field(description="Floor height in meters")
     baseElevation: float = Field(description="Base elevation in meters")
+
+
+# FUTURE: Models below are for S3 upload flow (not currently active)
+
+class PresignedUrlRequest(BaseModel):
+    """Request model for generating a temporary presigned S3 upload URL.
+
+    Presigned URLs allow uploading files directly to S3 without exposing
+    AWS credentials and routing large files.
+    """
+    buildingId: UUID
+    fileName: str
+    contentType: str = "model/stl"
+
+
+class PresignedUrlResponse(BaseModel):
+    """Response containing presigned S3 URL for direct upload.
+
+    The client should receive this response from POST /presigned-url,
+    use uploadUrl to PUT the file directly to S3, and call POST /process-stl
+    (with the s3Key) after upload completes.
+
+    Expiration time assumes STL files are small (few MB).
+    """
+    uploadUrl: str = Field(description="Presigned URL for PUT request to S3")
+    s3Key: str = Field(description="S3 object key where file will be stored")
+    expiresIn: int = Field(default=300, description="URL expiration time in seconds")
+
+
+class ProcessSTLRequest(BaseModel):
+    """Request to start asynchronous STL processing job
+
+    After uploading STL file to S3 using presigned URL, call this endpoint
+    to start processing. The job runs asynchronously. Poll GET /jobs/{job_id}
+    for current status/results.
+    """
+    buildingId: UUID
+    s3Key: str = Field(description="S3 key from PresignedUrlResponse")
+    floors: int = Field(description="Number of floors to split the building into")
+
+
+class Job(BaseModel):
+    """Async job model for long-running operations like STL processing.
+
+    Statuses:
+    - pending: Job created, waiting for worker to pick up
+    - processing: Worker is processing the STL file
+    - completed: Processing finished successfully. Check result field
+    - failed: Processing failed. Check message field for error details
+
+    S3 upload -> SQS queue -> Worker picks up job -> Updates status
+    """
+    id: UUID
+    buildingId: UUID
+    status: str = Field(description="pending | processing | completed | failed")
+    message: Optional[str] = Field(default=None, description="Status message or error")
+    result: Optional[dict] = Field(default=None, description="Processing results (floor polygons as GeoJSON)")
+    createdAt: datetime
+    updatedAt: datetime
+
+
+class JobResponse(BaseModel):
+    """Response model for job endpoints"""
+    data: Job

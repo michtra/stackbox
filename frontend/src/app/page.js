@@ -9,9 +9,10 @@ import stacking from '../../data/stacking.json';
 import OccupancyPieChart from './components/charts/OccupancyPieChart';
 import FloorOccupancyChart from './components/charts/FloorOccupancyChart';
 import ChartExportButton from './components/charts/ChartExportButton';
+import stacking from '../../test/stacking-legacy.json';
 
 /**
- * Finds point intersecting GeoJSON geometry side using line-line intersection calculation
+ * (Deprecated) Finds point intersecting GeoJSON geometry side using line-line intersection calculation
  * @param {float[]} centerCoord Center of floor plan
  * @param {float} percentCircle Value 0.0 to 1.0 representing percent of circle from 0 to 2*PI radians
  * @param {int} floorPlan Floor plan index of building from JSON
@@ -53,7 +54,7 @@ function findIntersection(centerCoord, percentCircle, floorPlan) {
 }
 
 /**
- * Splits GeoJSON shape into pie slices and returns list of GeoJSON shapes
+ * (Deprecated) Splits GeoJSON shape into pie slices and returns list of GeoJSON shapes
  * @param {float[]} centerCoord Center of floor plan
  * @param {float[]} percentageList List of values from 0.0 to 1.0 that should add up 1.0
  * @param {*} floorPlan Floor plan index of building from JSON
@@ -88,7 +89,8 @@ function proportionGeojson(centerCoord, percentageList, floorPlan) {
         if(isClockwise) {
             [lowerPercentInterPoint, lowerPercentInd, higherPercentInterPoint, higherPercentInd] = [higherPercentInterPoint, higherPercentInd, lowerPercentInterPoint, lowerPercentInd];
         }
-        // In case GeoJSON ends in between percentages
+        // In case GeoJSON index ends in between percentages
+        // (e.g. GeoJSON coordinate list length 10, pie slice has index 8, 9, 0, 1, 2, convert to 8, 9, 10, 11, 12 so that the for loop below this works)
         if(lowerPercentInd>higherPercentInd) {
             higherPercentInd = stacking.coordinates[floorPlan].length + higherPercentInd;
         }
@@ -106,7 +108,7 @@ function proportionGeojson(centerCoord, percentageList, floorPlan) {
     return geoJsonList;
 }
 
-export default function Home() {
+export default function Page() {
     const mapRef = useRef();
     const mapContainerRef = useRef();
     const pieChartRef = useRef(null);
@@ -263,86 +265,6 @@ export default function Home() {
                     'fill-extrusion-opacity': 1
                 }
             });
-
-            // mapRef.current.addLayer({
-            //     id: 'pennzoil-place',
-            //     type: 'custom',
-            //     renderingMode: '3d',
-            //     paint: {
-            //         'fill-color': '#ff0000'
-            //     },
-            //     onAdd: () => {
-            //         window.tb = new Threebox(
-            //             mapRef.current,
-            //             mapRef.current.getCanvas().getContext('webgl'),
-            //             { defaultLights: true }
-            //         );
-            //         const scale = 20;
-            //         const options = {
-            //             obj: '/tower.glb',
-            //             type: 'glb',
-            //             scale: { x: scale, y: scale, z: scale },
-            //             units: 'meters',
-            //             rotation: { x: 90, y: 45, z: 0 },
-            //         };
-
-            //         var dl = new THREE.DirectionalLight(0xff0000);
-            //         dl.position.set(0, -70, 100).normalize();
-            //         window.tb.scene.add(dl);
-            //         var dl2 = new THREE.DirectionalLight(0xff0000);
-            //         dl2.position.set(0, 70, 100).normalize();
-            //         window.tb.scene.add(dl2);
-
-            //         window.tb.loadObj(options, (model) => {
-            //             model.setCoords([-95.36576714742297, 29.76046335699732]);
-            //             model.setRotation({ x: 0, y: 0, z: 235 });
-            //             window.tb.add(model);
-            //         });
-            //     },
-            //     render: () => {
-            //         window.tb.update();
-            //     }
-            // });
-
-            // mapRef.current.addLayer({
-            //     id: '609-main',
-            //     type: 'custom',
-            //     renderingMode: '3d',
-            //     paint: {
-            //         'fill-color': '#ff0000'
-            //     },
-            //     onAdd: () => {
-            //         window.tb = new Threebox(
-            //             mapRef.current,
-            //             mapRef.current.getCanvas().getContext('webgl'),
-            //             { defaultLights: true }
-            //         );
-            //         const scale = 50;
-            //         const options = {
-            //             obj: '/ps5.glb',
-            //             type: 'glb',
-            //             scale: { x: scale, y: scale, z: scale },
-            //             units: 'meters',
-            //             rotation: { x: 90, y: 0, z: 0 },
-            //         };
-
-            //         var dl = new THREE.DirectionalLight(0xffffff);
-            //         dl.position.set(0, -70, 100).normalize();
-            //         window.tb.scene.add(dl);
-            //         var dl2 = new THREE.DirectionalLight(0xffffff);
-            //         dl2.position.set(0, 70, 100).normalize();
-            //         window.tb.scene.add(dl2);
-
-            //         window.tb.loadObj(options, (model) => {
-            //             model.setCoords([-95.36270621978426, 29.759467367489187]);
-            //             model.setRotation({ x: 0, y: 0, z: 235 });
-            //             window.tb.add(model);
-            //         });
-            //     },
-            //     render: () => {
-            //         window.tb.update();
-            //     }
-            // });
         });
             
         mapRef.current.on('click', 'stackingplan-layer', (e) => showInfo(e));

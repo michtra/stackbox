@@ -81,28 +81,20 @@
 
 ```json
 {
-  "id": "UUID",
-  "geometry": {
-    "type": "FeatureCollection",
-    "features": [
-      {
-        "type": "Feature",
-        "properties": {
-          "floorNumber": "integer"
-        },
-        "geometry": {
-          "type": "Polygon",
-          "coordinates": [[[-122.4, 37.8], [-122.3, 37.8], [-122.3, 37.7], ...]]
-        }
-      }
-    ]
+  "type": "array",
+  "items": {
+    "type": "array",
+    "items" {
+      "type": "array",
+      "items": ["number", "number"]
+    }
   }
 }
 ```
 
 **Notes:**
 - `floorNumber`: 0 = ground floor
-- `geometry`: GeoJSON FeatureCollection storing floor shape coordinates (optional)
+- `geometry`: List storing floor shape coordinates in the order of magnitude of floors -> floor shapes -> coordinates (optional)
 - GeoJSON coordinates use `[longitude, latitude]` order per RFC 7946 specification
 - `occupancies` supports multiple tenants per floor. Empty means vacant floor
 
