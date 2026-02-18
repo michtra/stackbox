@@ -2,7 +2,7 @@ import numpy as np
 import trimesh
 
 class FloorGenerator:
-    def __init__(self, model, floors, base_elevation = 0.0, center = None, scale = 1.0, rotation = 0.0):
+    def __init__(self, model, floors, base_elevation = 0.0, center = (0, 0), scale = 1.0, rotation = 0.0):
         self.mesh = trimesh.load_mesh(model)
         self.floors = floors
         self.base_elevation = base_elevation
@@ -23,21 +23,19 @@ class FloorGenerator:
                 [0, 0, 1],
                 self.mesh.centroid
             )
-        
-        if self.center is not None:
-            current_center = self.mesh.centroid[:2]  # Get x, y of centroid
-            offset = [
-                self.center[0] - current_center[0],
-                self.center[1] - current_center[1],
-                0
-            ]
-            self.mesh.apply_translation(offset)
 
     def generateFloors(self):
+        # Find center
+        plane_origin = (
+            (self.mesh.bounds[0, 0] + self.mesh.bounds[1, 0]) / 2 + self.center[0],
+            (self.mesh.bounds[0, 1] + self.mesh.bounds[1, 1]) / 2 + self.center[1],
+            self.mesh.bounds[0, 2]
+        )
+        
         # For some reason, the entire model shifts to be on the zero plane, heights are from 0 to (zmax - zmin)
         heights = np.linspace(0, self.mesh.bounds[1, 2] - self.mesh.bounds[0, 2], self.floors + 1)
         sections = self.mesh.section_multiplane(
-            plane_origin=self.mesh.bounds[0],
+            plane_origin=plane_origin,
             plane_normal=[0, 0, 1],
             heights=heights[:-1]
         )
