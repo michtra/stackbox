@@ -41,5 +41,5 @@ def test_floor_generator_default():
     print("✓ Floor generation works")
 
 if __name__ == "__main__":
-    test_floor_generator_offset((0, 0), 1.0, math.pi / 8)
+    test_floor_generator_offset((-90, 30), 0.0001, 45)
     test_floor_generator_default()

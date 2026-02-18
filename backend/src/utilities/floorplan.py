@@ -23,6 +23,7 @@ class FloorGenerator:
                 [0, 0, 1],
                 self.mesh.centroid
             )
+            self.mesh.apply_transform(rotation_matrix)
 
     def generateFloors(self):
         # Find center
