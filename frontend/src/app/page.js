@@ -1,10 +1,14 @@
 'use client'
 
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import mapboxgl from 'mapbox-gl';
 
 import 'mapbox-gl/dist/mapbox-gl.css'
 
+import stacking from '../../data/stacking.json';
+import OccupancyPieChart from './components/charts/OccupancyPieChart';
+import FloorOccupancyChart from './components/charts/FloorOccupancyChart';
+import ChartExportButton from './components/charts/ChartExportButton';
 import stacking from '../../test/stacking-legacy.json';
 
 /**
@@ -107,6 +111,11 @@ function proportionGeojson(centerCoord, percentageList, floorPlan) {
 export default function Page() {
     const mapRef = useRef();
     const mapContainerRef = useRef();
+    const pieChartRef = useRef(null);
+    const floorChartRef = useRef(null);
+    const [activeTab, setActiveTab] = useState('map');
+    const [chartTab, setChartTab] = useState('pie');
+    const [isDarkMode, setIsDarkMode] = useState(false);
 
     const buildingFloorHeight = stacking.height/stacking.floors;
     const showInfo = (e) => {
@@ -127,6 +136,15 @@ export default function Page() {
     var floorPopup = new mapboxgl.Popup();
 
     useEffect(() => {
+        if (activeTab !== 'map') {
+            if (mapRef.current) {
+                mapRef.current.remove();
+                mapRef.current = null;
+            }
+            return;
+        }
+        if (mapRef.current) return;
+
         var centerCoord = []
         stacking.coordinates.forEach((floorPlan) => {
             var maxCoord = [-Infinity, -Infinity];
@@ -251,12 +269,154 @@ export default function Page() {
             
         mapRef.current.on('click', 'stackingplan-layer', (e) => showInfo(e));
 
-        return () => mapRef.current.remove();
-    }, []);
+        return () => {
+            if (mapRef.current) {
+                mapRef.current.remove();
+                mapRef.current = null;
+            }
+        };
+    }, [activeTab]);
 
     return (
-        <div className='overflow-hidden'>
-            <div id='map-container' ref={mapContainerRef} className='w-screen h-screen'></div>
+        <div className='w-full min-h-screen flex flex-col overflow-hidden' style={{ backgroundColor: isDarkMode ? '#0f172a' : '#ffffff', minHeight: '100dvh' }}>
+            <div className="flex border-b z-10 relative" style={{ backgroundColor: isDarkMode ? '#1e293b' : '#ffffff', borderColor: isDarkMode ? '#334155' : '#e5e7eb' }}>
+                <button
+                    onClick={() => setActiveTab('map')}
+                    className={`flex-1 px-4 py-2 text-sm font-medium transition-colors duration-200 ${activeTab === 'map' ? 'text-blue-500 border-b-2 border-blue-500' : ''}`}
+                    style={{ 
+                        color: activeTab === 'map' ? '#3b82f6' : (isDarkMode ? '#94a3b8' : '#4b5563'),
+                        backgroundColor: activeTab === 'map' ? (isDarkMode ? '#1e3a5f' : '#eff6ff') : 'transparent'
+                    }}
+                >
+                    Map
+                </button>
+                <button
+                    onClick={() => setActiveTab('charts')}
+                    className={`flex-1 px-4 py-2 text-sm font-medium transition-colors duration-200 ${activeTab === 'charts' ? 'text-blue-500 border-b-2 border-blue-500' : ''}`}
+                    style={{ 
+                        color: activeTab === 'charts' ? '#3b82f6' : (isDarkMode ? '#94a3b8' : '#4b5563'),
+                        backgroundColor: activeTab === 'charts' ? (isDarkMode ? '#1e3a5f' : '#eff6ff') : 'transparent'
+                    }}
+                >
+                    Charts
+                </button>
+                <button
+                    onClick={() => setIsDarkMode(!isDarkMode)}
+                    className="px-4 py-2 text-sm font-medium transition-colors duration-200 hover:bg-opacity-10"
+                    style={{ color: isDarkMode ? '#94a3b8' : '#4b5563' }}
+                    title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+                >
+                    {isDarkMode ? (
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <circle cx="12" cy="12" r="5"/>
+                            <line x1="12" y1="1" x2="12" y2="3"/>
+                            <line x1="12" y1="21" x2="12" y2="23"/>
+                            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+                            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+                            <line x1="1" y1="12" x2="3" y2="12"/>
+                            <line x1="21" y1="12" x2="23" y2="12"/>
+                            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+                            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+                        </svg>
+                    ) : (
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                        </svg>
+                    )}
+                </button>
+            </div>
+            {activeTab === 'map' && <div id='map-container' ref={mapContainerRef} className='w-full flex-1 min-h-0'></div>}
+            {activeTab === 'charts' && (
+                <div className='w-full flex-1 min-h-0 flex flex-col' style={{ 
+                    background: isDarkMode ? 'linear-gradient(to bottom right, #0f172a, #1e293b)' : 'linear-gradient(to bottom right, #f9fafb, #ffffff)'
+                }}>
+                    <div className="flex border-b shadow-sm" style={{ 
+                        backgroundColor: isDarkMode ? '#1e293b' : '#ffffff',
+                        borderColor: isDarkMode ? '#334155' : '#e5e7eb'
+                    }}>
+                        <button
+                            onClick={() => setChartTab('pie')}
+                            className={`flex-1 px-6 py-3 text-sm font-semibold transition-all duration-200 ${chartTab === 'pie' ? 'border-b-2 border-blue-500' : ''}`}
+                            style={{ 
+                                color: chartTab === 'pie' ? '#3b82f6' : (isDarkMode ? '#cbd5e1' : '#374151'),
+                                backgroundColor: chartTab === 'pie' ? (isDarkMode ? '#1e3a5f' : '#eff6ff') : 'transparent'
+                            }}
+                        >
+                            Overview
+                        </button>
+                        <button
+                            onClick={() => setChartTab('floor')}
+                            className={`flex-1 px-6 py-3 text-sm font-semibold transition-all duration-200 ${chartTab === 'floor' ? 'border-b-2 border-blue-500' : ''}`}
+                            style={{ 
+                                color: chartTab === 'floor' ? '#3b82f6' : (isDarkMode ? '#cbd5e1' : '#374151'),
+                                backgroundColor: chartTab === 'floor' ? (isDarkMode ? '#1e3a5f' : '#eff6ff') : 'transparent'
+                            }}
+                        >
+                            By Floor
+                        </button>
+                    </div>
+                    <div className="flex-1 min-h-0 overflow-auto px-2 md:px-0">
+                        {chartTab === 'pie' && (
+                            <div ref={pieChartRef} className="min-h-full p-6 md:p-8">
+                                <div className="max-w-6xl mx-auto rounded-xl shadow-lg p-8 h-full flex flex-col" style={{ 
+                                    backgroundColor: isDarkMode ? '#1e293b' : '#ffffff'
+                                }}>
+                                    <div className="mb-6">
+                                        <h2 className="text-2xl font-bold mb-3" style={{ color: isDarkMode ? '#f1f5f9' : '#111827' }}>Building Occupancy by Tenant</h2>
+                                        <ChartExportButton 
+                                            targetRef={pieChartRef}
+                                            filename="building-occupancy-pie"
+                                            isDarkMode={isDarkMode}
+                                        >
+                                            Export
+                                        </ChartExportButton>
+                                    </div>
+                                    <div className="flex-1 flex items-center justify-center">
+                                        <OccupancyPieChart stackingData={stacking} isDarkMode={isDarkMode} />
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                        {chartTab === 'floor' && (
+                            <div ref={floorChartRef} className="min-h-full p-6 md:p-8">
+                                <div className="max-w-6xl mx-auto rounded-xl shadow-lg p-8 overflow-x-auto" style={{ 
+                                    backgroundColor: isDarkMode ? '#1e293b' : '#ffffff'
+                                }}>
+                                    <div className="mb-6">
+                                        <h2 className="text-2xl font-bold mb-3" style={{ color: isDarkMode ? '#f1f5f9' : '#111827' }}>Occupancy by Floor</h2>
+                                        <ChartExportButton 
+                                            targetRef={floorChartRef}
+                                            filename="occupancy-by-floor"
+                                            isDarkMode={isDarkMode}
+                                        >
+                                            Export
+                                        </ChartExportButton>
+                                    </div>
+                                    <div className="mt-4">
+                                        <FloorOccupancyChart stackingData={stacking} isDarkMode={isDarkMode} />
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                    <div className="shrink-0 px-6 md:px-8 py-4 border-t shadow-lg" style={{ 
+                        backgroundColor: isDarkMode ? '#1e293b' : '#ffffff',
+                        borderColor: isDarkMode ? '#334155' : '#e5e7eb'
+                    }}>
+                        <div className="max-w-6xl mx-auto flex justify-between text-sm font-medium" style={{ color: isDarkMode ? '#cbd5e1' : '#374151' }}>
+                            <span className="flex items-center gap-2">
+                                <span className="inline-block w-2 h-2 rounded-full" style={{ backgroundColor: '#3b82f6' }}></span>
+                                Total Floors: <span className="font-bold" style={{ color: isDarkMode ? '#f1f5f9' : '#111827' }}>{stacking.floors}</span>
+                            </span>
+                            <span className="flex items-center gap-2">
+                                <span className="inline-block w-2 h-2 rounded-full" style={{ backgroundColor: '#3b82f6' }}></span>
+                                Tenants: <span className="font-bold" style={{ color: isDarkMode ? '#f1f5f9' : '#111827' }}>{Object.keys(stacking.tenants).length}</span>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
+
