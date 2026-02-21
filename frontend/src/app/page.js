@@ -5,7 +5,6 @@ import mapboxgl from 'mapbox-gl';
 
 import 'mapbox-gl/dist/mapbox-gl.css'
 
-import stacking from '../../data/stacking.json';
 import OccupancyPieChart from './components/charts/OccupancyPieChart';
 import FloorOccupancyChart from './components/charts/FloorOccupancyChart';
 import ChartExportButton from './components/charts/ChartExportButton';
