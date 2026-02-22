@@ -5,7 +5,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, File, UploadFile, HTTPException, Query, status
 
-from utilities.file_storage import save_upload
+from utilities.file_storage import save_upload, delete_upload
 from utilities.fileloader import excelLoader, stackplanLoader
 
 router = APIRouter()
@@ -47,6 +47,9 @@ async def upload_context_file(
 
         try:
             stackplanLoader(tmp_path, floors, building_id)
+        except Exception:
+            delete_upload(metadata["s3_key"])
+            raise
         finally:
             os.unlink(tmp_path)
     elif type == "xlsx":

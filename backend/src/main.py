@@ -16,7 +16,7 @@ from models import (
     UploadJobResponse,
     Geometry, Address, BuildingMetadata, Location, PaginationMeta, Contact,
 )
-from utilities.file_storage import save_upload
+from utilities.file_storage import save_upload, delete_upload
 from database import get_db
 from db_models import BuildingModel, TenantModel, FloorModel, OccupancyModel, GeometryModel
 from config import settings
@@ -628,29 +628,32 @@ async def upload_stl(
 
     try:
         metadata = save_upload(id, "stl", file.filename, content)
-
-        # FloorGenerator needs a file path for trimesh.load_mesh()
-        suffix = os.path.splitext(file.filename)[1]
-        with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
-            tmp.write(content)
-            tmp_path = tmp.name
-
-        try:
-            center = (centerX, centerY) if centerX is not None and centerY is not None else None
-
-            generator = FloorGenerator(
-                model=tmp_path,
-                floors=db_building.total_floors,
-                base_elevation=baseElevation,
-                center=center,
-                scale=scale,
-                rotation=rotation
-            )
-            generator.generateFloors()
-        finally:
-            os.unlink(tmp_path)
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+    # FloorGenerator needs a file path for trimesh.load_mesh()
+    suffix = os.path.splitext(file.filename)[1]
+    with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
+        tmp.write(content)
+        tmp_path = tmp.name
+
+    try:
+        center = (centerX, centerY) if centerX is not None and centerY is not None else None
+
+        generator = FloorGenerator(
+            model=tmp_path,
+            floors=db_building.total_floors,
+            base_elevation=baseElevation,
+            center=center,
+            scale=scale,
+            rotation=rotation
+        )
+        generator.generateFloors()
+    except Exception:
+        delete_upload(metadata["s3_key"])
+        raise
+    finally:
+        os.unlink(tmp_path)
 
     import uuid
     job_id = str(uuid.uuid4())
