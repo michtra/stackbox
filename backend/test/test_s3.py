@@ -11,9 +11,9 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..',
 # check if S3 credentials are configured before importing modules that create a client
 try:
     from botocore.exceptions import NoCredentialsError, ClientError
-    from s3 import _client, download_file
+    from s3 import _get_client, download_file
     from config import settings
-    _client.list_buckets()
+    _get_client().list_buckets()
     S3_AVAILABLE = True
 except Exception:
     S3_AVAILABLE = False

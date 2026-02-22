@@ -654,6 +654,8 @@ async def upload_stl(
             os.unlink(tmp_path)
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except RuntimeError:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="File storage unavailable.")
 
     import uuid
     job_id = str(uuid.uuid4())
@@ -689,6 +691,8 @@ async def upload_excel(id: UUID, file: UploadFile = File(...), db: Session = Dep
         metadata = save_upload(id, "excel", file.filename, content)
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except RuntimeError:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="File storage unavailable.")
 
     import uuid
     job_id = str(uuid.uuid4())

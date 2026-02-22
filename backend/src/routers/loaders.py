@@ -35,6 +35,8 @@ async def upload_context_file(
         metadata = save_upload(building_id, type, file.filename, content)
     except ValueError as e:
         raise HTTPException(400, detail=str(e))
+    except RuntimeError:
+        raise HTTPException(status_code=503, detail="File storage unavailable.")
 
     if type == "stl":
         if floors is None:
