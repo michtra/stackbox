@@ -10,24 +10,26 @@ import {
     Tooltip,
     Legend
 } from 'chart.js';
+import { useEffect, useState } from 'react';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
 /**
  * Builds dataset for stacked bar chart showing floor-by-floor occupancy
- * @param {Object} stackingData - The stacking.json data
+ * @param {Object} stackingData - JSON endpoint output from data of a singular building
  * @returns {Object} - Chart.js compatible data object
  */
 function buildFloorOccupancyData(stackingData) {
-    const floors = stackingData.stackingplan.length;
-    const tenantNames = Object.keys(stackingData.tenants);
+    const floors = stackingData.floors.length;
     
     // Create datasets for each tenant + vacancy
-    const datasets = tenantNames.map(tenantName => ({
-        label: tenantName,
+    const datasets = {};
+    stackingData.tenants.forEach((tenant) => datasets[tenant.id] = ({
+        label: tenant.name,
         data: new Array(floors).fill(0),
-        backgroundColor: stackingData.tenants[tenantName].color,
-        borderColor: stackingData.tenants[tenantName].color,
+        sf: new Array(floors).fill(0),
+        backgroundColor: tenant.color,
+        borderColor: tenant.color,
         borderWidth: 1,
     }));
 
@@ -35,33 +37,42 @@ function buildFloorOccupancyData(stackingData) {
     const vacancyDataset = {
         label: 'Vacancy',
         data: new Array(floors).fill(0),
+        sf: new Array(floors).fill(0),
         backgroundColor: '#e5e5e5',
         borderColor: '#cccccc',
         borderWidth: 1,
     };
 
-    // Populate data for each floor
-    stackingData.stackingplan.forEach((floor, floorIndex) => {
+    // Populate data for each floor with current tenants
+    const now = new Date();
+    stackingData.floors.forEach((floor) => {
         let totalOccupancy = 0;
 
-        floor.forEach(([tenantName, percentage]) => {
-            const datasetIndex = tenantNames.indexOf(tenantName);
-            if (datasetIndex !== -1) {
-                datasets[datasetIndex].data[floorIndex] = percentage * 100;
-                totalOccupancy += percentage;
+        floor.occupancies.forEach((tenant) => {
+            if (tenant.tenantId in datasets && (new Date(tenant.leaseStart)) <= now <= (new Date(tenant.leaseEnd))) {
+                datasets[tenant.tenantId].sf[floor.floorNumber - 1] = tenant.squareFeet.parsedValue;
+                datasets[tenant.tenantId].data[floor.floorNumber - 1] = (tenant.squareFeet.parsedValue / floor.squareFeet.parsedValue) * 100;
+                totalOccupancy += tenant.squareFeet.parsedValue;
             }
         });
 
         // Calculate vacancy for this floor
-        vacancyDataset.data[floorIndex] = (1 - totalOccupancy) * 100;
+        vacancyDataset.sf[floor.floorNumber - 1] = floor.squareFeet.parsedValue - totalOccupancy;
+        vacancyDataset.data[floor.floorNumber - 1] = ((floor.squareFeet.parsedValue - totalOccupancy) / floor.squareFeet.parsedValue) * 100;
     });
 
     // Filter out tenants with no occupancy at all
-    const activeDatasets = datasets.filter(ds => ds.data.some(v => v > 0));
-    activeDatasets.push(vacancyDataset);
+    const activeDatasets = Object.entries({
+        ...Object.fromEntries(
+            Object.entries(datasets).filter(
+                ([key, ds]) => ds.data.some(v => v > 0)
+            )
+        ),
+        "vacant": vacancyDataset
+    }).map(([key, ds]) => {return {id: key, ...ds, data: ds.data.reverse(), sf: ds.sf.reverse()}});
 
     return {
-        labels: Array.from({ length: floors }, (_, i) => `Floor ${i + 1}`),
+        labels: Array.from({ length: floors }, (_, i) => `Floor ${i + 1}`).reverse(),
         datasets: activeDatasets
     };
 }
@@ -109,7 +120,7 @@ export default function FloorOccupancyChart({ stackingData, title = 'Floor-by-Fl
                 },
                 callbacks: {
                     label: function(context) {
-                        return `${context.dataset.label}: ${context.parsed.x.toFixed(1)}%`;
+                        return `${context.dataset.label}: ${context.parsed.x.toFixed(1)}% (${context.dataset.sf[context.parsed.y]} SF)`;
                     }
                 }
             }
@@ -158,7 +169,7 @@ export default function FloorOccupancyChart({ stackingData, title = 'Floor-by-Fl
 
     return (
         <div className="w-full" style={{ 
-            height: `${Math.max(600, stackingData.floors * 20)}px`, 
+            height: `${Math.max(600, stackingData.floors.length * 20)}px`, 
             backgroundColor: isDarkMode ? '#1e293b' : '#ffffff' 
         }}>
             <Bar data={data} options={options} />

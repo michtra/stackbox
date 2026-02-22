@@ -278,7 +278,7 @@ export default function Page() {
 
     return (
         <div className='w-full min-h-screen flex flex-col overflow-hidden' style={{ backgroundColor: isDarkMode ? '#0f172a' : '#ffffff', minHeight: '100dvh' }}>
-            <div className="flex border-b z-10 relative" style={{ backgroundColor: isDarkMode ? '#1e293b' : '#ffffff', borderColor: isDarkMode ? '#334155' : '#e5e7eb' }}>
+            <div className="flex border-b z-10 relative bg-white dark:bg-slate-800" style={{ backgroundColor: isDarkMode ? '#1e293b' : '#ffffff', borderColor: isDarkMode ? '#334155' : '#e5e7eb' }}>
                 <button
                     onClick={() => setActiveTab('map')}
                     className={`flex-1 px-4 py-2 text-sm font-medium transition-colors duration-200 ${activeTab === 'map' ? 'text-blue-500 border-b-2 border-blue-500' : ''}`}
