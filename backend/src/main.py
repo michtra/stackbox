@@ -15,8 +15,6 @@ from models import (
     StackingPlanResponse, StackingPlan,
     UploadJobResponse,
     Geometry, Address, BuildingMetadata, Location, PaginationMeta, Contact,
-    # FUTURE: S3 models - kept for when S3 upload flow is implemented
-    PresignedUrlRequest, PresignedUrlResponse, ProcessSTLRequest, JobResponse, Job
 )
 from utilities.file_storage import save_upload
 from database import get_db
@@ -24,6 +22,8 @@ from db_models import BuildingModel, TenantModel, FloorModel, OccupancyModel, Ge
 from config import settings
 from routers import loaders
 from utilities.floorplan import FloorGenerator
+import tempfile
+import os
 
 app = FastAPI(title="Stackbox API")
 
@@ -96,16 +96,6 @@ def read_root():
 @app.get("/items/{item_id}")
 def read_item(item_id: int, q: Union[str, None] = None):
     return {"item_id": item_id, "q": q}
-
-# FUTURE: S3 Upload Endpoints
-# These endpoints are placeholders for a future S3-based upload flow.
-# Currently all file uploads use local filesystem storage via /uploadfile
-# and /api/buildings/{id}/upload/* endpoints.
-# When S3 is implemented, add boto3 to requirements.txt and uncomment these.
-
-# @app.post("/api/v1/presigned-url", response_model=PresignedUrlResponse)
-# @app.post("/api/v1/process-stl", response_model=JobResponse)
-# @app.get("/api/v1/jobs/{job_id}", response_model=JobResponse)
 
 # Buildings
 @app.get("/api/buildings", response_model=BuildingListResponse)
@@ -638,18 +628,27 @@ async def upload_stl(
 
     try:
         metadata = save_upload(id, "stl", file.filename, content)
-        
-        center = (centerX, centerY) if centerX is not None and centerY is not None else None
-        
-        generator = FloorGenerator(
-            model=metadata["path"],
-            floors=db_building.total_floors,
-            base_elevation=baseElevation,
-            center=center,
-            scale=scale,
-            rotation=rotation
-        )
-        generator.generateFloors()
+
+        # FloorGenerator needs a file path for trimesh.load_mesh()
+        suffix = os.path.splitext(file.filename)[1]
+        with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
+            tmp.write(content)
+            tmp_path = tmp.name
+
+        try:
+            center = (centerX, centerY) if centerX is not None and centerY is not None else None
+
+            generator = FloorGenerator(
+                model=tmp_path,
+                floors=db_building.total_floors,
+                base_elevation=baseElevation,
+                center=center,
+                scale=scale,
+                rotation=rotation
+            )
+            generator.generateFloors()
+        finally:
+            os.unlink(tmp_path)
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
@@ -660,7 +659,7 @@ async def upload_stl(
         "jobId": job_id,
         "status": "processing",
         "message": f"Processing STL file for building {db_building.name}...",
-        "filePath": metadata["path"],
+        "s3Key": metadata["s3_key"],
     })
 
 @app.post("/api/buildings/{id}/upload/excel", response_model=UploadJobResponse)
@@ -695,7 +694,7 @@ async def upload_excel(id: UUID, file: UploadFile = File(...), db: Session = Dep
         "jobId": job_id,
         "status": "processing",
         "message": f"Processing Excel file for building {db_building.name}...",
-        "filePath": metadata["path"],
+        "s3Key": metadata["s3_key"],
     })
 
 @app.get("/api/buildings/{id}/processing-status")

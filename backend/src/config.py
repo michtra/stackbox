@@ -10,13 +10,13 @@ class Settings(BaseSettings):
     # AWS Configuration
     aws_region: str = "us-east-1"
     s3_bucket_name: str = "stackbox-uploads"
-    aws_endpoint_url: str | None = None  # For LocalStack, set AWS_ENDPOINT_URL=http://localhost:4566 in .env
+    aws_access_key_id: str | None = None
+    aws_secret_access_key: str | None = None
 
     # Upload Configuration
     presigned_url_expiration: int = 300  # 5 minutes, assumes STL files are small (few MB)
 
-    # Local Storage Configuration
-    upload_directory: str = "uploads"
+    # File Validation
     max_file_size_mb: int = 100
     allowed_file_extensions: list[str] = [".stl", ".glb", ".xlsx"]
 

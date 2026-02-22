@@ -1,4 +1,6 @@
+import io
 import json
+from typing import Union
 from uuid import uuid4, UUID
 from datetime import datetime
 
@@ -8,7 +10,7 @@ from utilities.floorplan import FloorGenerator
 from utilities.file_storage import save_processed_json
 
 
-def excelLoader(filepath: str) -> dict:
+def excelLoader(filepath: Union[str, io.BytesIO]) -> dict:
     """Parse a stacking plan Excel file and convert to the StackingPlan JSON schema.
 
     Expects an Excel file with two sheets:
@@ -16,7 +18,7 @@ def excelLoader(filepath: str) -> dict:
       - 'Rent Roll': tenant occupancy data (floor, tenant, SF, lease dates)
 
     Args:
-        filepath: Path to the .xlsx file.
+        filepath: Path to the .xlsx file or a BytesIO object.
 
     Returns:
         Dict matching the StackingPlan schema with building, tenants, floors, geometries.

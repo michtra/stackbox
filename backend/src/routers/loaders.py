@@ -1,3 +1,6 @@
+import io
+import os
+import tempfile
 from uuid import UUID
 
 from fastapi import APIRouter, File, UploadFile, HTTPException, Query, status
@@ -14,7 +17,7 @@ async def upload_context_file(
     building_id: UUID = Query(..., alias="buildingId"),
     floors: int | None = None,
 ):
-    """Upload a file for processing and store it locally.
+    """Upload a file for processing and store it in S3.
 
     Args:
         type: File type, either 'stl' or 'xlsx'.
@@ -33,14 +36,21 @@ async def upload_context_file(
     except ValueError as e:
         raise HTTPException(400, detail=str(e))
 
-    saved_path = metadata["path"]
-
     if type == "stl":
         if floors is None:
             raise HTTPException(400, detail="floors parameter is required for STL uploads.")
-        stackplanLoader(saved_path, floors, building_id)
+
+        suffix = os.path.splitext(file.filename)[1]
+        with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
+            tmp.write(content)
+            tmp_path = tmp.name
+
+        try:
+            stackplanLoader(tmp_path, floors, building_id)
+        finally:
+            os.unlink(tmp_path)
     elif type == "xlsx":
-        result = excelLoader(saved_path)
+        result = excelLoader(io.BytesIO(content))
         return {
             "detail": f"{file.filename} uploaded and parsed successfully.",
             "file": metadata,
