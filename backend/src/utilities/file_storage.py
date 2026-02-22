@@ -5,7 +5,7 @@ import time
 from uuid import UUID
 
 from config import settings
-from s3 import upload_file, generate_presigned_url, list_objects
+from s3 import upload_file, delete_file, generate_presigned_url, list_objects
 
 
 def save_upload(building_id: UUID, file_type: str, filename: str, content: bytes) -> dict:
@@ -34,6 +34,11 @@ def save_upload(building_id: UUID, file_type: str, filename: str, content: bytes
         "file_size": len(content),
         "timestamp": timestamp,
     }
+
+
+def delete_upload(s3_key: str) -> None:
+    """Delete a previously uploaded file from S3."""
+    delete_file(s3_key)
 
 
 def save_processed_json(building_id: UUID, data: str) -> str:

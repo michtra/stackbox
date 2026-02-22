@@ -16,7 +16,7 @@ from models import (
     UploadJobResponse,
     Geometry, Address, BuildingMetadata, Location, PaginationMeta, Contact,
 )
-from utilities.file_storage import save_upload
+from utilities.file_storage import save_upload, delete_upload
 from database import get_db
 from db_models import BuildingModel, TenantModel, FloorModel, OccupancyModel, GeometryModel
 from config import settings
@@ -647,6 +647,9 @@ async def upload_stl(
                 rotation=rotation
             )
             generator.generateFloors()
+        except Exception:
+            delete_upload(metadata["s3_key"])
+            raise
         finally:
             os.unlink(tmp_path)
     except ValueError as e:
