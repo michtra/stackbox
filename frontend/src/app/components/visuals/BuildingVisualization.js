@@ -5,7 +5,16 @@ import mapboxgl from "mapbox-gl";
 
 import { proportionBuilding } from "../../utilities/processor";
 
-export default function Visualization({ stackingData, isDarkMode = false }) {
+/**
+ * 
+ * @typedef {Object} BuildingVisualizationProps
+ * @property {Object} stackingData - JSON endpoint output from data of a singular building.
+ * @property {Boolean} isDarkMode - For dark mode adjustments.
+ * 
+ * @param {BuildingVisualizationProps} props
+ * @returns {JSX.Element}
+ */
+export default function BuildingVisualization({ stackingData, isDarkMode = false }) {
     const mapRef = useRef();
     const mapContainerRef = useRef();
     const floorData = proportionBuilding(stackingData);
@@ -18,7 +27,10 @@ export default function Visualization({ stackingData, isDarkMode = false }) {
         mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
         mapRef.current = new mapboxgl.Map({
             container: mapContainerRef.current,
-            center: [stackingData["building"]["location"]["longitude"]["parsedValue"], stackingData["building"]["location"]["latitude"]["parsedValue"]],
+            center: [
+                stackingData["building"]["location"]["longitude"]["parsedValue"],
+                stackingData["building"]["location"]["latitude"]["parsedValue"]
+            ],
             zoom: 17,
             pitch: 60,
         });
@@ -32,7 +44,6 @@ export default function Visualization({ stackingData, isDarkMode = false }) {
         mapRef.current.setStyle(isDarkMode ? "mapbox://styles/mapbox/dark-v11" : "mapbox://styles/mapbox/light-v11");
         mapRef.current.on("style.load", () => {
             if (!mapRef.current.getSource("stackingplan")) {
-                console.log("Ping")
                 mapRef.current.addSource("stackingplan", floorData);
                 mapRef.current.addLayer({
                     "id": "stackingplan-layer",

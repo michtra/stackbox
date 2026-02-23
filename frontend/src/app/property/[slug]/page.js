@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import clsx from "clsx";
 
-import Visualization from "@/app/components/visuals/Visualization";
+import BuildingVisualization from "@/app/components/visuals/BuildingVisualization";
 import OccupancyPieChart from "@/app/components/charts/OccupancyPieChart";
 import FloorOccupancyChart from "@/app/components/charts/FloorOccupancyChart";
 import ChartExportButton from '../../components/charts/ChartExportButton';
@@ -40,7 +40,7 @@ export default function Page() {
                 </button>
                 <ThemeToggle setIsDarkMode={setIsDarkMode} />
             </div>
-            {activeTab === 'map' && <Visualization stackingData={stacking} isDarkMode={isDarkMode} />}
+            {activeTab === 'map' && <BuildingVisualization stackingData={stacking} isDarkMode={isDarkMode} />}
             {activeTab === 'charts' && (
                 <div className="w-full flex-1 min-h-0 flex flex-col bg-slate-200/25 dark:bg-slate-900">
                     <div className="flex border-b shadow-sm bg-white dark:bg-slate-800 border-black/15 dark:border-slate-700">

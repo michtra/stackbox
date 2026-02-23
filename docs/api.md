@@ -130,9 +130,9 @@ Base: `/api/`
 
 **`GET /buildings`**
 
-Query: `page` (default 1), `limit` (default 20, max 100), `city`
+Query: `page` (default 1), `limit` (default 20, max 100), `city`, `userId`
 
-Returns: `{ data: [Building, ...], pagination: { page, limit, total, totalPages } }`
+Returns: `{ userId: "UUID", data: [Building, ...], pagination: { page, limit, total, totalPages } }`
 
 **`POST /buildings`**
 

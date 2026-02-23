@@ -1,0 +1,181 @@
+{
+    "userId": "94e0265d-3d9f-4c57-8f3e-2874bf40998e",
+    "data": [
+        {
+            "id": "94e0265d-3d9f-4c57-8f3e-2874bf40998e",
+            "name": "Texas Tower",
+            "address": {
+                "street": "845 Texas Ave",
+                "city": "Houston",
+                "state": "Texas",
+                "zip": "77002",
+                "country": "US"
+            },
+            "location": {
+                "latitude": {
+                    "source": "29.761151982330066",
+                    "parsedValue": 29.761151982330066
+                },
+                "longitude": {
+                    "source": "-95.36355778818508",
+                    "parsedValue": -95.36355778818508
+                }
+            },
+            "metadata": {
+                "totalFloors": 48,
+                "heightMeters": {
+                    "source": "224.0",
+                    "parsedValue": 224
+                },
+                "grossSquareFeet": {
+                    "source": "480000.0",
+                    "parsedValue": 480000
+                }
+            },
+            "createdAt": "2026-02-14T19:14:27.393686",
+            "updatedAt": "2026-02-14T19:14:27.393686"
+        },
+        {
+            "id": "94e0265d-3d9f-4c57-8f3e-2874bf40998e",
+            "name": "JPMorgan Chase Tower",
+            "address": {
+                "street": "270 Park Ave",
+                "city": "New York",
+                "state": "New York",
+                "zip": "10017",
+                "country": "US"
+            },
+            "location": {
+                "latitude": {
+                    "source": "40.755980178894156",
+                    "parsedValue": 40.755980178894156
+                },
+                "longitude": {
+                    "source": "-73.97598778479524",
+                    "parsedValue": -73.97598778479524
+                }
+            },
+            "metadata": {
+                "totalFloors": 48,
+                "heightMeters": {
+                    "source": "224.0",
+                    "parsedValue": 224
+                },
+                "grossSquareFeet": {
+                    "source": "480000.0",
+                    "parsedValue": 480000
+                }
+            },
+            "createdAt": "2026-02-14T19:14:27.393686",
+            "updatedAt": "2026-02-14T19:14:27.393686"
+        },
+        {
+            "id": "94e0265d-3d9f-4c57-8f3e-2874bf40998e",
+            "name": "JPMorgan Chase Tower",
+            "address": {
+                "street": "600 Travis St",
+                "city": "Houston",
+                "state": "Texas",
+                "zip": "77002",
+                "country": "US"
+            },
+            "location": {
+                "latitude": {
+                    "source": "29.760422168256376",
+                    "parsedValue": 29.760422168256376
+                },
+                "longitude": {
+                    "source": "-95.3639865090565",
+                    "parsedValue": -95.3639865090565
+                }
+            },
+            "metadata": {
+                "totalFloors": 48,
+                "heightMeters": {
+                    "source": "224.0",
+                    "parsedValue": 224
+                },
+                "grossSquareFeet": {
+                    "source": "480000.0",
+                    "parsedValue": 480000
+                }
+            },
+            "createdAt": "2026-02-14T19:14:27.393686",
+            "updatedAt": "2026-02-14T19:14:27.393686"
+        },
+        {
+            "id": "94e0265d-3d9f-4c57-8f3e-2874bf40998e",
+            "name": "JPMorgan Chase Center",
+            "address": {
+                "street": "1302 2nd Ave",
+                "city": "Seattle",
+                "state": "Washington",
+                "zip": "98101",
+                "country": "US"
+            },
+            "location": {
+                "latitude": {
+                    "source": "47.60758160299899",
+                    "parsedValue": 47.60758160299899
+                },
+                "longitude": {
+                    "source": "-122.338085957778",
+                    "parsedValue": -122.338085957778
+                }
+            },
+            "metadata": {
+                "totalFloors": 48,
+                "heightMeters": {
+                    "source": "224.0",
+                    "parsedValue": 224
+                },
+                "grossSquareFeet": {
+                    "source": "480000.0",
+                    "parsedValue": 480000
+                }
+            },
+            "createdAt": "2026-02-14T19:14:27.393686",
+            "updatedAt": "2026-02-14T19:14:27.393686"
+        },
+        {
+            "id": "94e0265d-3d9f-4c57-8f3e-2874bf40998e",
+            "name": "JPMorgan Chase Building",
+            "address": {
+                "street": "560 Mission St",
+                "city": "San Francisco",
+                "state": "California",
+                "zip": "94105",
+                "country": "US"
+            },
+            "location": {
+                "latitude": {
+                    "source": "37.78882208598226",
+                    "parsedValue": 37.78882208598226
+                },
+                "longitude": {
+                    "source": "-122.39943677092919",
+                    "parsedValue": -122.39943677092919
+                }
+            },
+            "metadata": {
+                "totalFloors": 48,
+                "heightMeters": {
+                    "source": "224.0",
+                    "parsedValue": 224
+                },
+                "grossSquareFeet": {
+                    "source": "480000.0",
+                    "parsedValue": 480000
+                }
+            },
+            "createdAt": "2026-02-14T19:14:27.393686",
+            "updatedAt": "2026-02-14T19:14:27.393686"
+        }
+    ],
+    "pagination": {
+        "page": 1,
+        "limit": 20,
+        "total": 5,
+        "totalPages": 1
+    } 
+}
