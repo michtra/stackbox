@@ -21,6 +21,8 @@ def _get_client():
         if settings.aws_access_key_id and settings.aws_secret_access_key:
             client_kwargs["aws_access_key_id"] = settings.aws_access_key_id
             client_kwargs["aws_secret_access_key"] = settings.aws_secret_access_key
+            if settings.aws_session_token:
+                client_kwargs["aws_session_token"] = settings.aws_session_token
         _s3_client = boto3.client("s3", **client_kwargs)
     return _s3_client
 
