@@ -28,9 +28,16 @@ function buildFloorOccupancyData(stackingData) {
         label: tenant.name,
         data: new Array(floors).fill(0),
         sf: new Array(floors).fill(0),
-        backgroundColor: tenant.color,
+        backgroundColor: `${tenant.color}aa`,
         borderColor: tenant.color,
-        borderWidth: 1,
+        borderWidth: 2,
+        borderRadius: {
+            topLeft: 4,
+            topRight: 4,
+            bottomLeft: 4,
+            bottomRight: 4,
+        },
+        borderSkipped: false,
     }));
 
     // Add vacancy dataset
@@ -38,9 +45,16 @@ function buildFloorOccupancyData(stackingData) {
         label: 'Vacancy',
         data: new Array(floors).fill(0),
         sf: new Array(floors).fill(0),
-        backgroundColor: '#e5e5e5',
+        backgroundColor: '#ccccccaa',
         borderColor: '#cccccc',
-        borderWidth: 1,
+        borderWidth: 2,
+        borderRadius: {
+            topLeft: 4,
+            topRight: 4,
+            bottomLeft: 4,
+            bottomRight: 4,
+        },
+        borderSkipped: false,
     };
 
     // Populate data for each floor with current tenants
@@ -84,7 +98,7 @@ export default function FloorOccupancyChart({ stackingData, title = 'Floor-by-Fl
         responsive: true,
         maintainAspectRatio: false,
         indexAxis: 'y',
-        backgroundColor: isDarkMode ? '#1e293b' : '#ffffff',
+        backgroundColor: isDarkMode ? '#0f172b' : '#ffffff',
         color: isDarkMode ? '#e2e8f0' : '#111827',
         plugins: {
             legend: {
@@ -169,8 +183,8 @@ export default function FloorOccupancyChart({ stackingData, title = 'Floor-by-Fl
 
     return (
         <div className="w-full" style={{ 
-            height: `${Math.max(600, stackingData.floors.length * 20)}px`, 
-            backgroundColor: isDarkMode ? '#1e293b' : '#ffffff' 
+            height: `${Math.max(600, stackingData.floors.length * 40)}px`, 
+            backgroundColor: isDarkMode ? '#0f172b' : '#ffffff' 
         }}>
             <Bar data={data} options={options} />
         </div>

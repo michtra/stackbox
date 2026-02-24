@@ -2,14 +2,13 @@
 
 import { useRef, useEffect } from "react";
 import mapboxgl from "mapbox-gl";
+import clsx from "clsx";
 
 import { propertyListingToGeoJSONFeatures } from "../../utilities/processor";
 
-export default function Visualization({ propertyListingData, isDarkMode = false }) {
-    const mapRef = useRef();
+export default function ListingVisualization({ className, propertyListingData, mapRef, isDarkMode = false }) {
     const mapContainerRef = useRef();
     const pointData = propertyListingToGeoJSONFeatures(propertyListingData);
-    console.log(pointData)
 
     let userInteracting = false;
     let inAnimation = false;
@@ -32,6 +31,7 @@ export default function Visualization({ propertyListingData, isDarkMode = false 
         mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
         mapRef.current = new mapboxgl.Map({
             container: mapContainerRef.current,
+            style: "mapbox://styles/mapbox/standard",
             center: [
                 -95.36237027373588,
                 29.759345588704043
@@ -137,8 +137,9 @@ export default function Visualization({ propertyListingData, isDarkMode = false 
     }, []);
 
     useEffect(() => {
-        mapRef.current.setStyle(isDarkMode ? "mapbox://styles/mapbox/dark-v11" : "mapbox://styles/mapbox/light-v11");
+        mapRef.current.setConfigProperty("basemap", "lightPreset", isDarkMode ? "night" : "day")
         mapRef.current.on("style.load", () => {
+            mapRef.current.setConfigProperty("basemap", "lightPreset", isDarkMode ? "night" : "day")
             if (!mapRef.current.getSource("propertylisting")) {
                 mapRef.current.addSource("propertylisting", pointData);
                 
@@ -167,9 +168,10 @@ export default function Visualization({ propertyListingData, isDarkMode = false 
                         "circle-color": [
                             "case",
                             ["boolean", ["feature-state", "hover"], false],
-                            "#b70021",
+                            "#fe395f",
                             "#17212b",
-                        ]
+                        ],
+                        "circle-emissive-strength": 1.0,
                     }
                 });
                 
@@ -200,9 +202,10 @@ export default function Visualization({ propertyListingData, isDarkMode = false 
                     },
                     paint: {
                         "circle-radius": 5,
-                        "circle-stroke-color": "#b70021",
+                        "circle-stroke-color": "#fe395f",
                         "circle-stroke-width": 5,
                         "circle-color": "#ffffff",
+                        "circle-emissive-strength": 1.0,
                     },
                 });
             }
@@ -211,7 +214,7 @@ export default function Visualization({ propertyListingData, isDarkMode = false 
     }, [isDarkMode]);
 
     return (
-        <div className="overflow-hidden">
+        <div className={clsx(className, "overflow-hidden")}>
             <div id="map-container" ref={mapContainerRef} className="w-screen h-screen"></div>
         </div>
     );

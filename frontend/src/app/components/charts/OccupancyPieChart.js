@@ -78,8 +78,8 @@ export default function OccupancyPieChart({ stackingData, title = 'Tenant Occupa
     const options = {
         responsive: true,
         maintainAspectRatio: false,
-        backgroundColor: isDarkMode ? '#1e293b' : '#ffffff',
-        color: isDarkMode ? '#1e293b' : '#e2e8f0',
+        backgroundColor: isDarkMode ? '#0f172b' : '#ffffff',
+        color: isDarkMode ? '#0f172b' : '#e2e8f0',
         plugins: {
             legend: {
                 position: 'bottom',
@@ -126,11 +126,11 @@ export default function OccupancyPieChart({ stackingData, title = 'Tenant Occupa
     return (
         <div className="w-full h-full flex items-center justify-center" style={{ 
             minHeight: '500px', 
-            backgroundColor: isDarkMode ? '#1e293b' : '#ffffff' 
+            backgroundColor: isDarkMode ? '#0f172b' : '#ffffff' 
         }}>
             <div className="w-full max-w-2xl" style={{ 
                 height: '500px', 
-                backgroundColor: isDarkMode ? '#1e293b' : '#ffffff' 
+                backgroundColor: isDarkMode ? '#0f172b' : '#ffffff' 
             }}>
                 <Pie data={data} options={options} />
             </div>
