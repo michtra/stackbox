@@ -27,7 +27,7 @@ export default function ChartExportButton({
 
         try {
             const canvas = await html2canvas(targetRef.current, {
-                backgroundColor: isDarkMode ? '#1e293b' : '#ffffff',
+                backgroundColor: localStorage.theme === "dark" || (!("theme" in localStorage) && window.matchMedia("(prefers-color-scheme: dark)").matches) ? '#1e293b' : '#ffffff',
                 scale: 2, // Higher resolution
                 logging: false,
                 useCORS: true

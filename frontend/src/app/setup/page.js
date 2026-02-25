@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-import { uploadFile } from "../../../utilities/endpoints";
+import { uploadFile } from "../utilities/endpoints";
 
 export default function Page() {
     const [modelFile, setModelFile] = useState();

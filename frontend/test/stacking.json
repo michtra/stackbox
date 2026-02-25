@@ -1,7 +1,7 @@
 {
     "building": {
         "id": "94e0265d-3d9f-4c57-8f3e-2874bf40998e",
-        "name": "845 Texas Ave",
+        "name": "Texas Tower",
         "address": {
             "street": "845 Texas Ave",
             "city": "Houston",
@@ -142,6 +142,10 @@
                         "source": "10000.0",
                         "parsedValue": 10000
                     },
+                    "baseRent": {
+                        "source": "2400.0",
+                        "parsedValue": 2400
+                    },
                     "leaseType": "Gross",
                     "leaseStart": "2022-01-01T00:00:00",
                     "leaseEnd": "2028-12-31T00:00:00"
@@ -254,6 +258,10 @@
                         "source": "2500.0",
                         "parsedValue": 2500
                     },
+                    "baseRent": {
+                        "source": "2400.0",
+                        "parsedValue": 2400
+                    },
                     "leaseType": "Gross",
                     "leaseStart": "2022-01-01T00:00:00",
                     "leaseEnd": "2028-12-31T00:00:00"
@@ -264,6 +272,10 @@
                     "squareFeet": {
                         "source": "4444.0",
                         "parsedValue": 4444
+                    },
+                    "baseRent": {
+                        "source": "2400.0",
+                        "parsedValue": 2400
                     },
                     "leaseType": "Gross",
                     "leaseStart": "2022-01-01T00:00:00",
@@ -287,6 +299,10 @@
                         "source": "10000.0",
                         "parsedValue": 10000
                     },
+                    "baseRent": {
+                        "source": "2400.0",
+                        "parsedValue": 2400
+                    },
                     "leaseType": "Gross",
                     "leaseStart": "2022-01-01T00:00:00",
                     "leaseEnd": "2028-12-31T00:00:00"
@@ -308,6 +324,10 @@
                     "squareFeet": {
                         "source": "10000.0",
                         "parsedValue": 10000
+                    },
+                    "baseRent": {
+                        "source": "2400.0",
+                        "parsedValue": 2400
                     },
                     "leaseType": "Gross",
                     "leaseStart": "2022-01-01T00:00:00",
@@ -331,6 +351,10 @@
                         "source": "10000.0",
                         "parsedValue": 10000
                     },
+                    "baseRent": {
+                        "source": "2400.0",
+                        "parsedValue": 2400
+                    },
                     "leaseType": "Gross",
                     "leaseStart": "2022-01-01T00:00:00",
                     "leaseEnd": "2028-12-31T00:00:00"
@@ -352,6 +376,10 @@
                     "squareFeet": {
                         "source": "10000.0",
                         "parsedValue": 10000
+                    },
+                    "baseRent": {
+                        "source": "2400.0",
+                        "parsedValue": 2400
                     },
                     "leaseType": "Gross",
                     "leaseStart": "2022-01-01T00:00:00",
@@ -384,6 +412,10 @@
                     "squareFeet": {
                         "source": "2278.0",
                         "parsedValue": 2278
+                    },
+                    "baseRent": {
+                        "source": "2400.0",
+                        "parsedValue": 2400
                     },
                     "leaseType": "Gross",
                     "leaseStart": "2022-01-01T00:00:00",
@@ -437,6 +469,10 @@
                         "source": "8400.0",
                         "parsedValue": 8400
                     },
+                    "baseRent": {
+                        "source": "2400.0",
+                        "parsedValue": 2400
+                    },
                     "leaseType": "Gross",
                     "leaseStart": "2022-01-01T00:00:00",
                     "leaseEnd": "2028-12-31T00:00:00"
@@ -478,6 +514,10 @@
                     "squareFeet": {
                         "source": "8200.0",
                         "parsedValue": 8200
+                    },
+                    "baseRent": {
+                        "source": "2400.0",
+                        "parsedValue": 2400
                     },
                     "leaseType": "Gross",
                     "leaseStart": "2022-01-01T00:00:00",
@@ -521,6 +561,10 @@
                         "source": "10000.0",
                         "parsedValue": 10000
                     },
+                    "baseRent": {
+                        "source": "2400.0",
+                        "parsedValue": 2400
+                    },
                     "leaseType": "Gross",
                     "leaseStart": "2022-01-01T00:00:00",
                     "leaseEnd": "2028-12-31T00:00:00"
@@ -543,6 +587,10 @@
                         "source": "2778.0",
                         "parsedValue": 2778
                     },
+                    "baseRent": {
+                        "source": "2400.0",
+                        "parsedValue": 2400
+                    },
                     "leaseType": "Gross",
                     "leaseStart": "2022-01-01T00:00:00",
                     "leaseEnd": "2028-12-31T00:00:00"
@@ -553,6 +601,10 @@
                     "squareFeet": {
                         "source": "2892.0",
                         "parsedValue": 2892
+                    },
+                    "baseRent": {
+                        "source": "2400.0",
+                        "parsedValue": 2400
                     },
                     "leaseType": "Gross",
                     "leaseStart": "2022-01-01T00:00:00",
@@ -576,6 +628,10 @@
                         "source": "10000.0",
                         "parsedValue": 10000
                     },
+                    "baseRent": {
+                        "source": "2400.0",
+                        "parsedValue": 2400
+                    },
                     "leaseType": "Gross",
                     "leaseStart": "2022-01-01T00:00:00",
                     "leaseEnd": "2028-12-31T00:00:00"
@@ -597,6 +653,10 @@
                     "squareFeet": {
                         "source": "10000.0",
                         "parsedValue": 10000
+                    },
+                    "baseRent": {
+                        "source": "2400.0",
+                        "parsedValue": 2400
                     },
                     "leaseType": "Gross",
                     "leaseStart": "2022-01-01T00:00:00",
@@ -620,6 +680,10 @@
                         "source": "10000.0",
                         "parsedValue": 10000
                     },
+                    "baseRent": {
+                        "source": "2400.0",
+                        "parsedValue": 2400
+                    },
                     "leaseType": "Gross",
                     "leaseStart": "2022-01-01T00:00:00",
                     "leaseEnd": "2028-12-31T00:00:00"
@@ -642,6 +706,10 @@
                         "source": "10000.0",
                         "parsedValue": 10000
                     },
+                    "baseRent": {
+                        "source": "2400.0",
+                        "parsedValue": 2400
+                    },
                     "leaseType": "Gross",
                     "leaseStart": "2022-01-01T00:00:00",
                     "leaseEnd": "2028-12-31T00:00:00"
@@ -663,6 +731,10 @@
                     "squareFeet": {
                         "source": "10000.0",
                         "parsedValue": 10000
+                    },
+                    "baseRent": {
+                        "source": "2400.0",
+                        "parsedValue": 2400
                     },
                     "leaseType": "Gross",
                     "leaseStart": "2022-01-01T00:00:00",
@@ -726,6 +798,10 @@
                         "source": "1319.0",
                         "parsedValue": 1319
                     },
+                    "baseRent": {
+                        "source": "2400.0",
+                        "parsedValue": 2400
+                    },
                     "leaseType": "Gross",
                     "leaseStart": "2022-01-01T00:00:00",
                     "leaseEnd": "2028-12-31T00:00:00"
@@ -768,6 +844,10 @@
                         "source": "10000.0",
                         "parsedValue": 10000
                     },
+                    "baseRent": {
+                        "source": "2400.0",
+                        "parsedValue": 2400
+                    },
                     "leaseType": "Gross",
                     "leaseStart": "2022-01-01T00:00:00",
                     "leaseEnd": "2028-12-31T00:00:00"
@@ -789,6 +869,10 @@
                     "squareFeet": {
                         "source": "10000.0",
                         "parsedValue": 10000
+                    },
+                    "baseRent": {
+                        "source": "2400.0",
+                        "parsedValue": 2400
                     },
                     "leaseType": "Gross",
                     "leaseStart": "2022-01-01T00:00:00",
@@ -812,6 +896,10 @@
                         "source": "10000.0",
                         "parsedValue": 10000
                     },
+                    "baseRent": {
+                        "source": "2400.0",
+                        "parsedValue": 2400
+                    },
                     "leaseType": "Gross",
                     "leaseStart": "2022-01-01T00:00:00",
                     "leaseEnd": "2028-12-31T00:00:00"
@@ -833,6 +921,10 @@
                     "squareFeet": {
                         "source": "10000.0",
                         "parsedValue": 10000
+                    },
+                    "baseRent": {
+                        "source": "2400.0",
+                        "parsedValue": 2400
                     },
                     "leaseType": "Gross",
                     "leaseStart": "2022-01-01T00:00:00",
@@ -856,6 +948,10 @@
                         "source": "10000.0",
                         "parsedValue": 10000
                     },
+                    "baseRent": {
+                        "source": "2400.0",
+                        "parsedValue": 2400
+                    },
                     "leaseType": "Gross",
                     "leaseStart": "2022-01-01T00:00:00",
                     "leaseEnd": "2028-12-31T00:00:00"
@@ -877,6 +973,10 @@
                     "squareFeet": {
                         "source": "10000.0",
                         "parsedValue": 10000
+                    },
+                    "baseRent": {
+                        "source": "2400.0",
+                        "parsedValue": 2400
                     },
                     "leaseType": "Gross",
                     "leaseStart": "2022-01-01T00:00:00",
@@ -900,6 +1000,10 @@
                         "source": "1000.0",
                         "parsedValue": 1000
                     },
+                    "baseRent": {
+                        "source": "2400.0",
+                        "parsedValue": 2400
+                    },
                     "leaseType": "Gross",
                     "leaseStart": "2022-01-01T00:00:00",
                     "leaseEnd": "2028-12-31T00:00:00"
@@ -910,6 +1014,10 @@
                     "squareFeet": {
                         "source": "1000.0",
                         "parsedValue": 1000
+                    },
+                    "baseRent": {
+                        "source": "2400.0",
+                        "parsedValue": 2400
                     },
                     "leaseType": "Gross",
                     "leaseStart": "2022-01-01T00:00:00",
@@ -922,6 +1030,10 @@
                         "source": "1000.0",
                         "parsedValue": 1000
                     },
+                    "baseRent": {
+                        "source": "2400.0",
+                        "parsedValue": 2400
+                    },
                     "leaseType": "Gross",
                     "leaseStart": "2022-01-01T00:00:00",
                     "leaseEnd": "2028-12-31T00:00:00"
@@ -932,6 +1044,10 @@
                     "squareFeet": {
                         "source": "1000.0",
                         "parsedValue": 1000
+                    },
+                    "baseRent": {
+                        "source": "2400.0",
+                        "parsedValue": 2400
                     },
                     "leaseType": "Gross",
                     "leaseStart": "2022-01-01T00:00:00",
@@ -944,6 +1060,10 @@
                         "source": "1000.0",
                         "parsedValue": 1000
                     },
+                    "baseRent": {
+                        "source": "2400.0",
+                        "parsedValue": 2400
+                    },
                     "leaseType": "Gross",
                     "leaseStart": "2022-01-01T00:00:00",
                     "leaseEnd": "2028-12-31T00:00:00"
@@ -954,6 +1074,10 @@
                     "squareFeet": {
                         "source": "1000.0",
                         "parsedValue": 1000
+                    },
+                    "baseRent": {
+                        "source": "2400.0",
+                        "parsedValue": 2400
                     },
                     "leaseType": "Gross",
                     "leaseStart": "2022-01-01T00:00:00",
@@ -966,6 +1090,10 @@
                         "source": "1000.0",
                         "parsedValue": 1000
                     },
+                    "baseRent": {
+                        "source": "2400.0",
+                        "parsedValue": 2400
+                    },
                     "leaseType": "Gross",
                     "leaseStart": "2022-01-01T00:00:00",
                     "leaseEnd": "2028-12-31T00:00:00"
@@ -976,6 +1104,10 @@
                     "squareFeet": {
                         "source": "1000.0",
                         "parsedValue": 1000
+                    },
+                    "baseRent": {
+                        "source": "2400.0",
+                        "parsedValue": 2400
                     },
                     "leaseType": "Gross",
                     "leaseStart": "2022-01-01T00:00:00",
@@ -988,6 +1120,10 @@
                         "source": "1000.0",
                         "parsedValue": 1000
                     },
+                    "baseRent": {
+                        "source": "2400.0",
+                        "parsedValue": 2400
+                    },
                     "leaseType": "Gross",
                     "leaseStart": "2022-01-01T00:00:00",
                     "leaseEnd": "2028-12-31T00:00:00"
@@ -998,6 +1134,10 @@
                     "squareFeet": {
                         "source": "1000.0",
                         "parsedValue": 1000
+                    },
+                    "baseRent": {
+                        "source": "2400.0",
+                        "parsedValue": 2400
                     },
                     "leaseType": "Gross",
                     "leaseStart": "2022-01-01T00:00:00",
