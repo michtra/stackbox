@@ -6,9 +6,9 @@ import { ChevronRight } from "@mui/icons-material";
 import { ChevronLeft } from "@mui/icons-material";
 
 export default function ResizableWindows({ children, className }) {
-    const [sideBarWidth, setSideBarWidth] = useState(450);
-    const [isSideBarOpen, setIsSideBarOpen] = useState(false);
-    const isResizing = useRef(true);
+    const [sideBarWidth, setSideBarWidth] = useState(700);
+    const [isSideBarOpen, setIsSideBarOpen] = useState(true);
+    const isResizing = useRef(false);
 
     useEffect(() => {
         window.addEventListener("load", () => {
@@ -20,7 +20,7 @@ export default function ResizableWindows({ children, className }) {
             }
             setSideBarWidth((sideBarWidth) => {
                 const newSideBarWidth = sideBarWidth - e.movementX;
-                return newSideBarWidth < 300 ? sideBarWidth : newSideBarWidth
+                return newSideBarWidth < 500 ? sideBarWidth : newSideBarWidth
             });
         });
         window.addEventListener("mouseup", () => {
@@ -41,9 +41,9 @@ export default function ResizableWindows({ children, className }) {
             >
                 <div className={clsx("w-0.5 h-full bg-slate-300 dark:bg-slate-700 rounded-full transition-all group-hover:bg-slate-500")}></div>
             </div>
-            <div className={clsx("flex flex-col", isResizing && "select-none")} style={{ minWidth: `${sideBarWidth}px` }}>
+            <div className={clsx("flex flex-col", isResizing && "select-none")} style={{ minWidth: `${sideBarWidth}px`, maxWidth: `${sideBarWidth}px` }}>
                 <div
-                    className="w-14 h-14 flex flex-col px-4 pt-4 justify-center items-center text-black/40 dark:text-white/50"
+                    className="w-14 h-14 flex flex-col px-8 pt-4 justify-center items-center text-black/40 dark:text-white/50"
                     onClick={() => {
                         setIsSideBarOpen(false);
                     }}

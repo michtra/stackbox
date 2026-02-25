@@ -52,7 +52,7 @@ function calculateTenantOccupancy(stackingData) {
 
     // Add vacancy
     if (totalVacancy > 0) {
-        labels.push('Vacancy');
+        labels.push('Vacancy (Owner)');
         values.push(totalVacancy);
         colors.push('#e5e5e5');
     }

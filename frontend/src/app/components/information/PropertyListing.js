@@ -41,8 +41,8 @@ export default function PropertyListing({ className, propertyListingData, mapRef
                             }}
                         >
                             <span className="text-lg font-medium">{building.name}</span>
-                            <span className="text-sm text-black/50 dark:text-white/75">{building.address.street}</span>
-                            <span className="text-sm text-black/50 dark:text-white/75">{building.address.city}, {building.address.state}, {building.address.zip} {building.address.country}</span>
+                            <span className="text-sm text-black/75 dark:text-white/75">{building.address.street}</span>
+                            <span className="text-sm text-black/75 dark:text-white/75">{building.address.city}, {building.address.state}, {building.address.zip} {building.address.country}</span>
                         </div>
                     )}
                 </div>

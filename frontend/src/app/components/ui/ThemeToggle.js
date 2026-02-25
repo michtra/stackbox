@@ -58,7 +58,7 @@ export default function ThemeToggle({ setIsDarkMode }) {
     return (
         <div>
             <button
-                className="bg-white dark:bg-slate-800 text-black/50 dark:text-slate-500 w-12 h-12 transition-all flex flex-col justify-center items-center rounded-md shadow-2xl"
+                className="bg-white dark:bg-slate-800 text-black/75 dark:text-slate-500 w-12 h-12 transition-all flex flex-col justify-center items-center rounded-md shadow-2xl"
                 onClick={handleThemeChange}
             >
                 {iconSelections[selectedTheme]}
