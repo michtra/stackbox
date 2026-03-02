@@ -7,8 +7,6 @@ load_dotenv()
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 
-password = "837Owaq-sp3brlsplvq&hew*"
-
 conn = None
 try:
     conn = psycopg2.connect(
