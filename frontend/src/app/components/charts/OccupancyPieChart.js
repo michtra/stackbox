@@ -8,38 +8,51 @@ import {
     Legend,
     Title
 } from 'chart.js';
+import { useEffect, useState } from 'react';
 
 ChartJS.register(ArcElement, Tooltip, Legend, Title);
 
 /**
  * Calculates total occupancy per tenant across all floors
- * @param {Object} stackingData - The stacking.json data
+ * @param {Object} stackingData - JSON endpoint output from data of a singular building
  * @returns {Object} - { labels, values, colors }
  */
 function calculateTenantOccupancy(stackingData) {
     const tenantOccupancy = {};
+    const tenantData = {};
     let totalVacancy = 0;
 
-    // Sum up occupancy for each tenant across all floors
-    stackingData.stackingplan.forEach((floor) => {
+    // Sum up occupancy for each current tenant across all floors (in SF)
+    const now = new Date();
+    stackingData.floors.forEach((floor) => {
         let floorOccupancy = 0;
-        floor.forEach(([tenantName, percentage]) => {
-            if (!tenantOccupancy[tenantName]) {
-                tenantOccupancy[tenantName] = 0;
+        floor.occupancies.forEach((tenant) => {
+            if ((new Date(tenant.leaseStart)) <= now <= (new Date(tenant.leaseEnd))) {
+                if (!(tenant.tenantId in tenantOccupancy)) {
+                    tenantOccupancy[tenant.tenantId] = 0;
+                }
+                tenantOccupancy[tenant.tenantId] += tenant.squareFeet.parsedValue;
+                floorOccupancy += tenant.squareFeet.parsedValue;
             }
-            tenantOccupancy[tenantName] += percentage;
-            floorOccupancy += percentage;
         });
-        totalVacancy += (1 - floorOccupancy);
+        totalVacancy += (floor.squareFeet.parsedValue - floorOccupancy);
     });
 
-    const labels = Object.keys(tenantOccupancy);
+    // Get tenant data
+    stackingData.tenants.forEach((tenant) => {
+        tenantData[tenant.id] = {
+            name: tenant.name,
+            color: tenant.color
+        }
+    })
+
+    const labels = Object.keys(tenantOccupancy).map((key) => tenantData[key].name);
     const values = Object.values(tenantOccupancy);
-    const colors = labels.map(name => stackingData.tenants[name]?.color || '#cccccc');
+    const colors = Object.keys(tenantOccupancy).map((key) => tenantData[key]?.color || "#cccccc");
 
     // Add vacancy
     if (totalVacancy > 0) {
-        labels.push('Vacancy');
+        labels.push('Vacancy (Owner)');
         values.push(totalVacancy);
         colors.push('#e5e5e5');
     }
@@ -65,8 +78,8 @@ export default function OccupancyPieChart({ stackingData, title = 'Tenant Occupa
     const options = {
         responsive: true,
         maintainAspectRatio: false,
-        backgroundColor: isDarkMode ? '#1e293b' : '#ffffff',
-        color: isDarkMode ? '#e2e8f0' : '#111827',
+        backgroundColor: isDarkMode ? '#0f172b' : '#ffffff',
+        color: isDarkMode ? '#0f172b' : '#e2e8f0',
         plugins: {
             legend: {
                 position: 'bottom',
@@ -103,7 +116,7 @@ export default function OccupancyPieChart({ stackingData, title = 'Tenant Occupa
                     label: function(context) {
                         const total = context.dataset.data.reduce((a, b) => a + b, 0);
                         const percentage = ((context.parsed / total) * 100).toFixed(1);
-                        return `${context.label}: ${percentage}% (${context.parsed.toFixed(2)} floors)`;
+                        return `${context.label}: ${percentage}% (${context.parsed.toFixed(2)} SF)`;
                     }
                 }
             }
@@ -113,11 +126,11 @@ export default function OccupancyPieChart({ stackingData, title = 'Tenant Occupa
     return (
         <div className="w-full h-full flex items-center justify-center" style={{ 
             minHeight: '500px', 
-            backgroundColor: isDarkMode ? '#1e293b' : '#ffffff' 
+            backgroundColor: isDarkMode ? '#0f172b' : '#ffffff' 
         }}>
             <div className="w-full max-w-2xl" style={{ 
                 height: '500px', 
-                backgroundColor: isDarkMode ? '#1e293b' : '#ffffff' 
+                backgroundColor: isDarkMode ? '#0f172b' : '#ffffff' 
             }}>
                 <Pie data={data} options={options} />
             </div>

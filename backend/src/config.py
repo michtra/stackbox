@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     s3_bucket_name: str = "stackbox-uploads"
     aws_access_key_id: str | None = None
     aws_secret_access_key: str | None = None
+    aws_session_token: str | None = None
 
     # Upload Configuration
     presigned_url_expiration: int = 300  # 5 minutes, assumes STL files are small (few MB)

@@ -272,4 +272,40 @@ function tenantJSONToObject(tenantJSON) {
     return tenantObject;
 }
 
-export { proportionBuilding };
+
+function propertyListingToGeoJSONFeatures(propertyListingData) {
+    const geoJSONFeatures = {
+        "type": "geojson",
+        "data": {
+            "type": "FeatureCollection",
+            "features": []
+        },
+        "cluster": true,
+        "clusterMaxZoom": 20,
+        "clusterRadius": 50
+    };
+    propertyListingData.data.forEach((building) => {
+        geoJSONFeatures.data.features.push({
+            "type": "Feature",
+            "properties": {
+                "id": building.id,
+                "name": building.name,
+                "street": building.street,
+                "city": building.city,
+                "state": building.state,
+                "zip": building.zip,
+                "country": building.country,
+            },
+            "geometry": {
+                "coordinates": [
+                    building.location.longitude.parsedValue,
+                    building.location.latitude.parsedValue,
+                ],
+                "type": "Point"
+            }
+        });
+    });
+    return geoJSONFeatures;
+}
+
+export { proportionBuilding, propertyListingToGeoJSONFeatures };

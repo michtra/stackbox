@@ -4,3 +4,5 @@ task/
 tasks/
 backend/.env
 backend/venv/
+# VS Code config files
+.vscode
