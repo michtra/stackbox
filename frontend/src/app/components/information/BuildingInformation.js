@@ -8,6 +8,11 @@ import { KeyboardArrowDown } from "@mui/icons-material";
 import BuildingStatistics from "@/app/components/information/BuildingStatistics";
 import BuildingComposition from "@/app/components/information/BuildingComposition";
 
+/**
+ * 
+ * @param {Object} stackingData - JSON endpoint output from data of a singular building. 
+ * @returns 
+ */
 function getRentalData(stackingData) {
     let totalOccupiedSF = 0;
     let rentalIncome = 0;
@@ -131,15 +136,15 @@ export default function BuildingInformation({ stackingData, isDarkMode }) {
                             </MenuItem>
                         </Menu>
                     </div>
-                    <div className="w-48 h-10 flex flex-row bg-black/10 p-1 rounded-lg">
+                    <div className="w-48 h-10 flex flex-row bg-black/10 dark:bg-white/10 p-1 rounded-lg">
                         <div
-                            className={clsx("w-full h-full flex flex-col justify-center items-center px-3 rounded-lg font-medium transition-all", timeUnit == "Month" ? "bg-white text-black" : "bg-transparent text-black/50")}
+                            className={clsx("w-full h-full flex flex-col justify-center items-center px-3 rounded-lg font-medium transition-all", timeUnit == "Month" ? "bg-white dark:bg-slate-500 text-black dark:text-white" : "bg-transparent text-black/50 dark:text-white/50")}
                             onClick={() => setTimeUnit("Month")}
                         >
                             Month
                         </div>
                         <div
-                            className={clsx("w-full h-full flex flex-col justify-center items-center px-3 rounded-lg font-medium transition-all", timeUnit == "Year" ? "bg-white text-black" : "bg-transparent text-black/50")}
+                            className={clsx("w-full h-full flex flex-col justify-center items-center px-3 rounded-lg font-medium transition-all", timeUnit == "Year" ? "bg-white dark:bg-slate-500 text-black dark:text-white" : "bg-transparent text-black/50 dark:text-white/50")}
                             onClick={() => setTimeUnit("Year")}
                         >
                             Year

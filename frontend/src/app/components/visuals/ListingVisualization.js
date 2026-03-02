@@ -6,6 +6,17 @@ import clsx from "clsx";
 
 import { propertyListingToGeoJSONFeatures } from "../../utilities/processor";
 
+/**
+ * 
+ * @typedef {Object} BuildingVisualizationProps
+ * @property {String} className - Styling
+ * @property {Object} propertyListingData - JSON endpoint output from data of a user member building listing.
+ * @property {RefObject} mapRef - Reference object to MapBox GL JS map
+ * @property {Boolean} isDarkMode - For dark mode adjustments.
+ * 
+ * @param {BuildingVisualizationProps} props
+ * @returns {JSX.Element}
+ */
 export default function ListingVisualization({ className, propertyListingData, mapRef, isDarkMode = false }) {
     const mapContainerRef = useRef();
     const pointData = propertyListingToGeoJSONFeatures(propertyListingData);
