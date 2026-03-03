@@ -4,7 +4,7 @@ import { useRef, useEffect } from "react";
 import mapboxgl from "mapbox-gl";
 import clsx from "clsx";
 
-import { propertyListingToGeoJSONFeatures } from "../../utilities/processor";
+import { propertyListingToGeoJSONFeatures } from "@/app/utilities/processor";
 
 /**
  * 
