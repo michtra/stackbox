@@ -2,7 +2,6 @@ import os
 import sys
 from logging.config import fileConfig
 from pathlib import Path
-from urllib.parse import urlparse
 
 from sqlalchemy import create_engine, pool
 
@@ -53,9 +52,7 @@ def run_migrations_offline() -> None:
 def run_migrations_online() -> None:
     """Run migrations in 'online' mode (apply directly to DB)."""
     url = config.get_main_option("sqlalchemy.url")
-    host = urlparse(url).hostname or ""
-    connect_args = {} if host in ("localhost", "127.0.0.1") else {"sslmode": "require"}
-    connectable = create_engine(url, poolclass=pool.NullPool, connect_args=connect_args)
+    connectable = create_engine(url, poolclass=pool.NullPool, connect_args={"sslmode": "require"})
 
     with connectable.connect() as connection:
         context.configure(
