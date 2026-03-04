@@ -29,7 +29,7 @@ export default function ResizableWindows({ children, className }) {
     }, [])
 
     return (
-        <div className="relative w-full h-screen flex flex-row">
+        <div className="relative w-full h-screen flex flex-row overflow-hidden">
             <div className={clsx("flex flex-col justify-center items-center overflow-hidden transition-all", isSideBarOpen ? "w-full" : "min-w-screen")}>
                 {children[0]}
             </div>
@@ -50,7 +50,9 @@ export default function ResizableWindows({ children, className }) {
                 >
                     <ChevronRight sx={{ fontSize: 36 }} />
                 </div>
-                {children[1]}
+                <div className="min-h-[calc(100vh-3.5rem)] max-h-[calc(100vh-3.5rem)] overflow-hidden">
+                    {children[1]}
+                </div>
             </div>
             <div
                 className={clsx(isSideBarOpen && "hidden", "absolute right-4 top-4 w-10 h-10 flex flex-col justify-center items-center shadow-2xl rounded-md bg-white dark:bg-slate-900 text-black/40 dark:text-white/50 transition-all z-10")}

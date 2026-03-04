@@ -4,21 +4,21 @@ import { useRef, useEffect } from "react";
 import mapboxgl from "mapbox-gl";
 import { STLLoader } from "three/examples/jsm/loaders/STLLoader";
 
-export default function BuildingAdjustments({ src, isDarkMode, mapRef, modelRef, scale, setCoords, coords, setRotation, rotation }) {
+export default function BuildingAdjustments({ src, isDarkMode, mapRef, modelRef, scale, setCoordLng, coordLng, setCoordLat, coordLat, setRotation, rotation }) {
     const mapContainerRef = useRef();
 
     useEffect(() => {
         mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
         mapRef.current = new mapboxgl.Map({
             container: mapContainerRef.current,
-            center: [-95.36576714742297, 29.76046335699732],
+            center: [coordLng, coordLat],
             zoom: 17,
             pitch: 60,
         });
 
         mapRef.current.on("style.load", () => {
             mapRef.current.addLayer({
-                id: 'pennzoil-place',
+                id: 'building-model',
                 type: 'custom',
                 renderingMode: '3d',
                 onAdd: () => {
@@ -40,7 +40,7 @@ export default function BuildingAdjustments({ src, isDarkMode, mapRef, modelRef,
                         geometry.computeBoundingBox();
                         geometry.translate(0, 0, -geometry.boundingBox.min.z);
 
-                        const material = new THREE.MeshPhongMaterial({ color: 0xffffff });
+                        const material = new THREE.MeshPhongMaterial({ color: 0xeeeeee });
                         const mesh = new THREE.Mesh(geometry, material);
 
                         modelRef.current = window.tb.Object3D({
@@ -48,7 +48,7 @@ export default function BuildingAdjustments({ src, isDarkMode, mapRef, modelRef,
                             units: 'meters',
                             draggable: true,
                         });
-                        modelRef.current.setCoords(coords);
+                        modelRef.current.setCoords([coordLng, coordLat]);
                         modelRef.current.setRotation({ x: 0, y: 0, z: rotation });
                         modelRef.current.model.scale.set(scale, scale, scale);
 
@@ -57,8 +57,11 @@ export default function BuildingAdjustments({ src, isDarkMode, mapRef, modelRef,
 
                         // Drag listener
                         modelRef.current.addEventListener("ObjectDragged", (e) => {
-                            console.log(e.detail.draggedObject.coordinates)
-                            console.log(e.detail.draggedObject.rotation)
+                            setCoordLng(e.detail.draggedObject.coordinates[0])
+                            setCoordLat(e.detail.draggedObject.coordinates[1])
+                            const newRotation = e.detail.draggedObject.rotation.z * 180 / Math.PI % 360; // For some reason, setting rotation is in degrees and getting rotation is in radians
+                            setRotation(newRotation)
+                            modelRef.current.setRotation({ x: 0, y: 0, z: newRotation }); // In case someone Beyblades the building
                         });
                     });
                 },
