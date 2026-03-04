@@ -12,7 +12,8 @@ try:
     conn = psycopg2.connect(
         DATABASE_URL,
         sslmode='verify-full',
-    sslrootcert='global-bundle.pem'
+        sslrootcert='global-bundle.pem',
+        connect_timeout=10,
     )
     cur = conn.cursor()
     cur.execute('SELECT version();')
