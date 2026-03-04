@@ -1,23 +1,15 @@
 services:
-  localstack:
-    image: localstack/localstack:latest
-    container_name: stackbox-localstack
+  postgres:
+    image: postgres:16
+    container_name: stackbox-postgres
     ports:
-      - "4566:4566"  # LocalStack gateway
+      - "5432:5432"
     environment:
-      - SERVICES=s3,sqs
-      - DEBUG=1
-      - DOCKER_HOST=unix:///var/run/docker.sock
+      POSTGRES_USER: stackbox_user
+      POSTGRES_PASSWORD: stackbox_password
+      POSTGRES_DB: stackbox
     volumes:
-      - "./localstack-init:/etc/localstack/init/ready.d"  # Init scripts
-      - "/var/run/docker.sock:/var/run/docker.sock"
-      - "localstack-data:/var/lib/localstack"
-    networks:
-      - stackbox-network
+      - pgdata:/var/lib/postgresql/data
 
 volumes:
-  localstack-data:
-
-networks:
-  stackbox-network:
-    driver: bridge
+  pgdata:
