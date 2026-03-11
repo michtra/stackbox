@@ -1,37 +1,51 @@
 "use client"
 
 import { useState } from "react";
+import clsx from "clsx";
 import { Slider } from "@mui/material";
 import { Upload } from "@mui/icons-material";
 import { Apartment } from "@mui/icons-material";
 import { ListAlt } from "@mui/icons-material";
 
-import { uploadFile } from "@/app/utilities/endpoints";
+import { urlToFile } from "@/app/utilities/endpoints";
 import NumberInput from "@/app/components/ui/NumberInput";
+import { loadAdjustmentsBuildingMesh } from "@/app/utilities/processor";
 
-export default function BuildingForm({ mapRef, modelRef, setScale, scale, setCoordLng, coordLng, setCoordLat, coordLat, setRotation, rotation }) {
-    const [modelFile, setModelFile] = useState();
-    const [excelFile, setExcelFile] = useState();
+export default function BuildingForm({ srcProps, isDarkMode, mapRef, modelProps }) {
+    // TODO: Google Maps Platform Place Autocomplete integration.
+
+    const [modelFileName, setModelFileName] = useState();
+    const [excelFileName, setExcelFileName] = useState();
+    const [modelFileURL, setModelFileURL] = useState();
+    const [excelFileURL, setExcelFileURL] = useState();
 
     return (
         <div className="flex flex-col w-full h-full p-6 gap-8 overflow-y-scroll">
             <div className="flex flex-col">
                 <span>Scale</span>
                 <Slider
-                    value={scale ?? 1}
+                    value={modelProps.scale ?? 1}
                     valueLabelDisplay="auto"
+                    valueLabelFormat={(val) => {return `${10 ** val}`}}
                     step={0.01}
-                    min={0.1}
-                    max={100}
+                    min={-1}
+                    max={3}
                     marks={[
-                        {value: 0.01, label: "0.01"},
-                        {value: 1, label: "1"},
-                        {value: 10, label: "10"},
-                        {value: 100, label: "100"}
+                        {value: -1, label: "0.01"},
+                        {value: 0, label: "1"},
+                        {value: 1, label: "10"},
+                        {value: 2, label: "100"},
+                        {value: 3, label: "1000"},
                     ]}
+                    sx={{
+                        '& .MuiSlider-markLabel': {
+                            color: clsx(isDarkMode ? "#ffffff" : "#000000")
+                        }
+                    }}
                     onChange={(e, val) => {
-                        setScale(val);
-                        modelRef.current.model.scale.set(val, val, val);
+                        modelProps.setScale(val);
+                        const newScale = 10 ** val;
+                        modelProps.modelRef.current.model.scale.set(newScale, newScale, newScale);
                         mapRef.current.triggerRepaint();
                     }}
                 />
@@ -39,7 +53,7 @@ export default function BuildingForm({ mapRef, modelRef, setScale, scale, setCoo
             <div className="flex flex-col">
                 <span>Rotation</span>
                 <Slider
-                    value={rotation ?? 0}
+                    value={modelProps.rotation ?? 0}
                     valueLabelDisplay="auto"
                     step={0.01}
                     min={0}
@@ -51,9 +65,14 @@ export default function BuildingForm({ mapRef, modelRef, setScale, scale, setCoo
                         {value: 270, label: "270°"},
                         {value: 360, label: "360°"}
                     ]}
+                    sx={{
+                        '& .MuiSlider-markLabel': {
+                            color: clsx(isDarkMode ? "#ffffff" : "#000000")
+                        }
+                    }}
                     onChange={(e, val) => {
-                        setRotation(val);
-                        modelRef.current.setRotation({ x: 0, y: 0, z: val });
+                        modelProps.setRotation(val);
+                        modelProps.modelRef.current.setRotation({ x: 0, y: 0, z: val });
                         mapRef.current.triggerRepaint();
                     }}
                 />
@@ -61,13 +80,13 @@ export default function BuildingForm({ mapRef, modelRef, setScale, scale, setCoo
             <div className="flex flex-col gap-2">
                 <span>Latitude</span>
                 <NumberInput
-                    value={coordLat}
+                    value={modelProps.coordLat}
                     increment={0.0001}
                     min={-90}
                     max={90}
                     onChange={(val) => {
-                        setCoordLat(val);
-                        modelRef.current.setCoords([coordLng, val]);
+                        modelProps.setCoordLat(val);
+                        modelProps.modelRef.current.setCoords([modelProps.coordLng, val]);
                         mapRef.current.triggerRepaint();
                     }}
                 />
@@ -75,84 +94,110 @@ export default function BuildingForm({ mapRef, modelRef, setScale, scale, setCoo
             <div className="flex flex-col gap-2">
                 <span>Longitude</span>
                 <NumberInput
-                    value={coordLng}
+                    value={modelProps.coordLng}
                     increment={0.0001}
                     min={-180}
                     max={180}
                     onChange={(val) => {
-                        setCoordLng(val);
-                        modelRef.current.setCoords([val, coordLat]);
+                        modelProps.setCoordLng(val);
+                        modelProps.modelRef.current.setCoords([val, modelProps.coordLat]);
                         mapRef.current.triggerRepaint();
                     }}
                 />
             </div>
-            <div className="flex flex-col gap-4">
-                <div className="flex flex-row w-full h-full gap-4">
-                    <label htmlFor="model_file_uploader" className="relative flex flex-col w-full h-full">
-                        {
-                            modelFile ?
-                            <div className="flex flex-col w-full h-full gap-2 justify-center items-center p-4 border-2 border-blue-400 rounded-xl shadow-blue-400 shadow-[0_0_16px]">
-                                <Apartment sx={{ fontSize: 48 }} />
-                                {modelFile.name}
-                            </div> :
-                            <div className="flex flex-col w-full h-full gap-2 justify-center items-center p-4 border-2 rounded-xl border-dashed">
-                                <Upload sx={{ fontSize: 48 }} />
-                                Upload STL Model
-                            </div>
-                        }
-                        <input
-                            id="model_file_uploader"
-                            type="file"
-                            accept=".stl"
-                            className="absolute left-0 top-0 w-full h-full opacity-0"
-                            onChange={(e) => {
-                                if (e.target.files[0].type == "application/stl") {
-                                    setModelFile(e.target.files[0]);
-                                }
-                            }}
-                        />
-                    </label>
-                    <label htmlFor="excel_file_uploader" className="relative flex flex-col w-full h-full">
-                        {
-                            excelFile ?
-                            <div className="flex flex-col w-full h-full gap-2 justify-center items-center p-4 border-2 border-blue-400 rounded-xl shadow-blue-400 shadow-[0_0_16px]">
-                                <ListAlt sx={{ fontSize: 48 }} />
-                                {excelFile.name}
-                            </div> :
-                            <div className="flex flex-col w-full h-full gap-2 justify-center items-center p-4 border-2 rounded-xl border-dashed">
-                                <Upload sx={{ fontSize: 48 }} />
-                                Upload Excel File
-                            </div>
-                        }
-                        <input
-                            id="excel_file_uploader"
-                            type="file"
-                            accept=".xlsx"
-                            className="absolute left-0 top-0 w-full h-full opacity-0"
-                            onChange={(e) => {
-                                if (e.target.files[0].type == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet") {
-                                    setExcelFile(e.target.files[0]);
-                                }
-                            }}
-                        />
-                    </label>
-                </div>
+            <div className="flex flex-col w-full h-full gap-4">
+                <label htmlFor="model_file_uploader" className="relative flex flex-col w-full h-full">
+                    {
+                        modelFileName ?
+                        <div className="flex flex-col w-full h-full gap-2 justify-center items-center p-4 border-2 border-blue-400 rounded-xl shadow-blue-400 shadow-[0_0_16px]">
+                            <Apartment sx={{ fontSize: 48 }} />
+                            {modelFileName}
+                        </div> :
+                        <div className="flex flex-col w-full h-full gap-2 justify-center items-center p-4 border-2 rounded-xl border-dashed">
+                            <Upload sx={{ fontSize: 48 }} />
+                            Upload STL Model
+                        </div>
+                    }
+                    <input
+                        id="model_file_uploader"
+                        type="file"
+                        accept=".stl"
+                        className="absolute left-0 top-0 w-full h-full opacity-0 cursor-pointer"
+                        onChange={(e) => {
+                            if (e.target.files[0].type == "application/stl") {
+                                setModelFileURL(URL.createObjectURL(e.target.files[0]));
+                                setModelFileName(e.target.files[0].name);
+                            }
+                        }}
+                    />
+                </label>
                 <button
-                    className="flex flex-col justify-center items-center w-full h-12 p-2 gap-2 outline rounded-sm cursor-pointer hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-all"
+                    className="flex flex-col justify-center items-center w-full h-12 p-2 gap-2 outline rounded-sm cursor-pointer hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black disabled:bg-black/25 disabled:text-black/40 dark:disabled:bg-white/25 dark:disabled:text-white/40 disabled:outline-0 disabled:cursor-not-allowed transition-all"
+                    disabled={!modelFileURL}
                     onClick={() => {
-                        if (modelFile && excelFile) {
-                            uploadFile(excelFile, "xlsx", "b8c0233b-069d-44b9-bd28-b60255448678").then((excelUploadResponse) => {
-                                console.log(excelUploadResponse);
-                                uploadFile(modelFile, "stl", "b8c0233b-069d-44b9-bd28-b60255448678", 20).then((modelUploadResponse) => {
-                                    console.log(modelUploadResponse);
-                                });
-                            });
+                        if (modelFileURL) {
+                            srcProps.setModelSrc(modelFileURL);
+                            setModelFileURL(null);
+                            setModelFileName(null);
+                            
+                            loadAdjustmentsBuildingMesh(modelFileURL, modelProps, mapRef);
                         }
                     }}
                 >
                     Reupload
                 </button>
             </div>
+            <div className="flex flex-col w-full h-full gap-4">
+                <label htmlFor="excel_file_uploader" className="relative flex flex-col w-full h-full">
+                    {
+                        excelFileName ?
+                        <div className="flex flex-col w-full h-full gap-2 justify-center items-center p-4 border-2 border-blue-400 rounded-xl shadow-blue-400 shadow-[0_0_16px]">
+                            <ListAlt sx={{ fontSize: 48 }} />
+                            {excelFileName}
+                        </div> :
+                        <div className="flex flex-col w-full h-full gap-2 justify-center items-center p-4 border-2 rounded-xl border-dashed">
+                            <Upload sx={{ fontSize: 48 }} />
+                            Upload Excel File
+                        </div>
+                    }
+                    <input
+                        id="excel_file_uploader"
+                        type="file"
+                        accept=".xlsx"
+                        className="absolute left-0 top-0 w-full h-full opacity-0 cursor-pointer"
+                        onChange={(e) => {
+                            if (e.target.files[0].type == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet") {
+                                setExcelFileURL(URL.createObjectURL(e.target.files[0]));
+                                setExcelFileName(e.target.files[0].name);
+                            }
+                        }}
+                    />
+                </label>
+                <button
+                    className="flex flex-col justify-center items-center w-full h-12 p-2 gap-2 outline rounded-sm cursor-pointer hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black disabled:bg-black/25 disabled:text-black/40 dark:disabled:bg-white/25 dark:disabled:text-white/40 disabled:outline-0 disabled:cursor-not-allowed transition-all"
+                    disabled={!excelFileURL}
+                    onClick={() => {
+                        if (excelFileURL) {
+                            srcProps.setExcelSrc(excelFileURL);
+                            setExcelFileURL(null);
+                            setExcelFileName(null);
+                        }
+                    }}
+                >
+                    Reupload
+                </button>
+            </div>
+            <button
+                className="flex flex-col justify-center items-center w-full h-12 p-2 gap-2 outline rounded-sm cursor-pointer hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-all"
+                onClick={() => {
+                    if (srcProps.modelSrc && srcProps.excelSrc) {
+                        urlToFile(srcProps.modelSrc);
+                        urlToFile(srcProps.excelSrc);
+                    }
+                }}
+            >
+                Submit
+            </button>
         </div>
     );
 }
