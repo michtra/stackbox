@@ -604,7 +604,8 @@ async def upload_stl(
     baseElevation: float = Form(...),
     centerX: Optional[float] = Form(None),
     centerY: Optional[float] = Form(None),
-    scale: float = Form(1.0),
+    scaleX: float = Form(1.0),
+    scaleY: float = Form(1.0),
     rotation: float = Form(0.0),
     db: Session = Depends(get_db)
 ):
@@ -637,6 +638,7 @@ async def upload_stl(
 
         try:
             center = (centerX, centerY) if centerX is not None and centerY is not None else None
+            scale = (scaleX, scaleY) if scaleX is not None and scaleY is not None else None
 
             generator = FloorGenerator(
                 model=tmp_path,

@@ -1,4 +1,7 @@
+// TODO: CHange this to use server instead of client
 "use client"
+
+import { meterToLatLng } from "@/app/utilities/processor";
 
 /**
  * (Deprecated) Uploads file to backend using the /uploadfile endpoint.
@@ -48,12 +51,15 @@ async function createBuilding(modelSrc, excelSrc, metadata) {
             return false;
         }
 
+        scale = meterToLatLng(metadata.adjustments.scale, metadata.building.location.latitude, metadata.building.location.longitude);
+
         const stlFormData = new FormData();
         stlFormData.append("file", await urlToFile(modelSrc));
         stlFormData.append("baseElevation", 0); // Trimesh already sets min height as 0 height. Although, maybe I'll do something with this query.
         stlFormData.append("centerX", metadata.building.location.longitude);
         stlFormData.append("centerY", metadata.building.location.latitude);
-        stlFormData.append("scale", metadata.adjustments.scale);
+        stlFormData.append("scaleX", scale.lng);
+        stlFormData.append("scaleY", scale.lat);
         stlFormData.append("rotation", metadata.adjustments.rotation);
         const stlUploadResponse = await fetch(`${process.env.NEXT_PUBLIC_SERVER_URL}/api/buildings/${buildingCreateResponse.data.id}/upload/stl`, {
             method: "POST",
@@ -96,6 +102,25 @@ async function getBuilding(id) {
     catch (error) {
         console.error("Error when creating building:", error);
         return;
+    }
+}
+
+async function getBuildingListing(page, limit) {
+    // TODO: Add user ID-based retrieval once Cognito is implemented
+    // This will be done in this order
+    // 1. Frontend function passes access token
+    // 2. Backend uses access token to get OpenID Subject ID (I think companies typically do this with Redis)
+    // 3. Backend uses OpenID Subject ID as a query
+    try {
+        const buildingListingResponse = await fetch(`${process.env.NEXT_PUBLIC_SERVER_URL}/api/buildings?page=${page}&limit=${limit}`);
+        if (!buildingListingResponse.ok) {
+            console.error("Network error when getting building list:", buildingListingResponse.statusText);
+            return;
+        }
+        return buildingListingResponse;
+    }
+    catch (error) {
+        console.error("Error when getting building list:", error);
     }
 }
 

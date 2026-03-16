@@ -370,4 +370,16 @@ function loadAdjustmentsBuildingMesh(src, modelProps, mapRef=null) {
     });
 }
 
-export { proportionBuilding, propertyListingToGeoJSONFeatures, loadAdjustmentsBuildingMesh };
+
+function meterToLatLng(meter, lat, lng) {
+    // Based on https://gis.stackexchange.com/questions/2951/algorithm-for-offsetting-latitude-longitude-by-some-amount-of-meters
+    // Using 111111 meters per degree lat is better for lower lat while 111319.5 meters per degree lat is better for higher lat
+    latScale = meter / 111319.5;
+    lngScale = latScale / Math.cos(lat * Math.PI / 180);
+    return {
+        lat: latScale,
+        lng: lngScale,
+    }
+}
+
+export { proportionBuilding, propertyListingToGeoJSONFeatures, loadAdjustmentsBuildingMesh, meterToLatLng };

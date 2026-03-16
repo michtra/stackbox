@@ -4,6 +4,7 @@ import clsx from "clsx";
 import { useState } from "react";
 import { Search } from "@mui/icons-material";
 import { useRouter } from "next/navigation";
+import { Pagination } from "@mui/material";
 
 import SetupUploadForm from "../forms/SetupUploadForm";
 
@@ -11,6 +12,7 @@ export default function PropertyListing({ className, propertyListingData, mapRef
     const router = useRouter();
 
     const [isUploadPanelOpen, setIsUploadPanelOpen] = useState(false);
+    const [page, setPage] = useState(1);
 
     return (
         <div className={clsx(className, "w-full h-full")}>
@@ -50,6 +52,14 @@ export default function PropertyListing({ className, propertyListingData, mapRef
                                 <span className="text-sm text-black/75 dark:text-white/75">{building.address.city}, {building.address.state}, {building.address.zip} {building.address.country}</span>
                             </div>
                         )}
+                        <Pagination
+                            count={propertyListingData.pagination.totalPages}
+                            page={page} 
+                            onChange={(e, val) => {
+                                // TODO: Add backend integration after adding test data into RDS
+                                setPage(val);
+                            }}
+                        />
                     </div>
                 </div>
                 <div className="flex flex-row gap-2 pb-6 px-6">

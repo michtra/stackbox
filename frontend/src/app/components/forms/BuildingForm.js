@@ -191,8 +191,8 @@ export default function BuildingForm({ srcProps, isDarkMode, mapRef, modelProps 
                 className="flex flex-col justify-center items-center w-full h-12 p-2 gap-2 outline rounded-sm cursor-pointer hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-all"
                 onClick={() => {
                     if (srcProps.modelSrc && srcProps.excelSrc) {
-                        urlToFile(srcProps.modelSrc);
-                        urlToFile(srcProps.excelSrc);
+                        console.log(srcProps.modelSrc);
+                        console.log(srcProps.excelSrc);
                     }
                 }}
             >
