@@ -31,7 +31,7 @@ export default function BuildingStatistics({ stackingData, isDarkMode, timeUnit,
                     </div>
                     <div className="flex flex-col">
                         <span className="text-black/75 dark:text-white/75 text-sm font-bold">Net Rentable Area</span>
-                        <span className="text-2xl font-medium">{stackingData.building.metadata.grossSquareFeet.parsedValue} SF</span>
+                        <span className="text-2xl font-medium">{stackingData.building.metadata.grossSquareFeet.parsedValue.toLocaleString()} SF</span>
                     </div>
                     <div className="flex flex-col">
                         <span className="text-black/75 dark:text-white/75 text-sm font-bold">Total Floors</span>

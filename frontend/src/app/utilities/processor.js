@@ -1,5 +1,7 @@
 "use client"
 
+import { STLLoader } from "three/examples/jsm/loaders/STLLoader";
+
 /**
  * Perimeter-based proportioning method for tenant relative proportion visualization.
  * @param {float[][]} floorPlanShapes List of floor plan shapes (made of lat-lng coordinates) for single floor.
@@ -308,4 +310,76 @@ function propertyListingToGeoJSONFeatures(propertyListingData) {
     return geoJSONFeatures;
 }
 
-export { proportionBuilding, propertyListingToGeoJSONFeatures };
+
+function loadAdjustmentsBuildingMesh(src, modelProps, mapRef=null) {
+    const loader = new STLLoader();
+    loader.load(src, (geometry) => {
+        if (mapRef) {
+            // Removing the old model
+            if (modelProps.modelRef.current) {
+                modelProps.modelRef.current.removeFromParent?.();
+                if (modelProps.modelRef.current.parent) {
+                    modelProps.modelRef.current.parent.remove(modelRef.current);
+                }
+                modelProps.modelRef.current = null;
+            }
+
+            if (modelProps.meshRef.current) {
+                modelProps.meshRef.current.geometry?.dispose?.();
+                if (Array.isArray(modelProps.meshRef.current.material)) {
+                    modelProps.meshRef.current.material.forEach((m) => m?.dispose?.());
+                } else {
+                    modelProps.meshRef.current.material?.dispose?.();
+                }
+                modelProps.meshRef.current = null;
+            }
+        }
+
+        // Compensating for the fact that Trimesh starts z-axis on min bounding box
+        geometry.computeBoundingBox();
+        geometry.translate(0, 0, -geometry.boundingBox.min.z);
+
+        const material = new THREE.MeshPhongMaterial({ color: 0xeeeeee });
+        modelProps.meshRef.current = new THREE.Mesh(geometry, material);
+
+        modelProps.modelRef.current = window.tb.Object3D({
+            obj: modelProps.meshRef.current,
+            units: 'meters',
+            draggable: true,
+        });
+        modelProps.modelRef.current.setCoords([modelProps.coordLng, modelProps.coordLat]);
+        modelProps.modelRef.current.setRotation({ x: 0, y: 0, z: modelProps.rotation });
+        const currScale = 10 ** modelProps.scale;
+        modelProps.modelRef.current.model.scale.set(currScale, currScale, currScale);
+
+        window.tb.add(modelProps.modelRef.current);
+        window.tb.altitudeStep = 0;
+
+        // Drag listener
+        modelProps.modelRef.current.addEventListener("ObjectDragged", (e) => {
+            modelProps.setCoordLng(e.detail.draggedObject.coordinates[0])
+            modelProps.setCoordLat(e.detail.draggedObject.coordinates[1])
+            const newRotation = e.detail.draggedObject.rotation.z * 180 / Math.PI % 360; // For some reason, setting rotation is in degrees and getting rotation is in radians
+            modelProps.setRotation(newRotation)
+            modelProps.modelRef.current.setRotation({ x: 0, y: 0, z: newRotation }); // In case someone Beyblades the building
+        });
+
+        if (mapRef) {
+            mapRef.current.triggerRepaint();
+        }
+    });
+}
+
+
+function meterToLatLng(meter, lat, lng) {
+    // Based on https://gis.stackexchange.com/questions/2951/algorithm-for-offsetting-latitude-longitude-by-some-amount-of-meters
+    // Using 111111 meters per degree lat is better for lower lat while 111319.5 meters per degree lat is better for higher lat
+    latScale = meter / 111319.5;
+    lngScale = latScale / Math.cos(lat * Math.PI / 180);
+    return {
+        lat: latScale,
+        lng: lngScale,
+    }
+}
+
+export { proportionBuilding, propertyListingToGeoJSONFeatures, loadAdjustmentsBuildingMesh, meterToLatLng };

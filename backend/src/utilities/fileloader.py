@@ -10,7 +10,7 @@ from utilities.floorplan import FloorGenerator
 from utilities.file_storage import save_processed_json
 
 
-def excelLoader(filepath: Union[str, io.BytesIO]) -> dict:
+def excelLoader(filepath: Union[str, io.BytesIO], isBuildingOnly=False) -> dict:
     """Parse a stacking plan Excel file and convert to the StackingPlan JSON schema.
 
     Expects an Excel file with two sheets:
@@ -73,6 +73,13 @@ def excelLoader(filepath: Union[str, io.BytesIO]) -> dict:
         "createdAt": now,
         "updatedAt": now,
     }
+    
+    # Return building data only if requested
+    if isBuildingOnly:
+        stacking_plan = {
+            "building": building
+        }
+        return stacking_plan
 
     # --- Parse Rent Roll sheet ---
     rent_roll = pd.read_excel(xls, sheet_name="Rent Roll", header=None)

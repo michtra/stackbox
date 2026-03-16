@@ -1,53 +1,70 @@
 "use client"
 
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 
-import { uploadFile } from "../utilities/endpoints";
+import BuildingAdjustments from "@/app/components/visuals/BuildingAdjustments";
+import ResizableWindows from "@/app/components/ui/ResizableWindows";
+import BuildingForm from "@/app/components/forms/BuildingForm";
+import ThemeToggle from "@/app/components/ui/ThemeToggle";
 
 export default function Page() {
-    const [modelFile, setModelFile] = useState();
-    const [excelFile, setExcelFile] = useState();
+    const router = useRouter();
+    const setupParams = useSearchParams();
 
-    return (
-        <div className="flex flex-col">
-            <label htmlFor="model_file_uploader" className="w-16 h-16">Upload STL Model:</label>
-            <input
-                id="model_file_uploader"
-                type="file"
-                className=""
-                onChange={(e) => {
-                    console.log(e.target.files[0]);
-                    setModelFile(e.target.files[0]);
-                }}
-            >
-            </input>
-            <button
-                onClick={() => {
-                    uploadFile(modelFile, "stl", "b8c0233b-069d-44b9-bd28-b60255448678", 20)
-                }}
-            >
-                Upload test model
-            </button>
-            <label htmlFor="excel_file_uploader" className="w-16 h-16">Upload Excel Data:</label>
-            <input
-                id="excel_file_uploader"
-                type="file"
-                className=""
-                onChange={(e) => {
-                    console.log(e.target.files[0]);
-                    setExcelFile(e.target.files[0]);
-                }}
-            >
-            </input>
-            <button
-                onClick={() => {
-                    uploadFile(excelFile, "xlsx", "b8c0233b-069d-44b9-bd28-b60255448678").then((e) => {
-                        console.log(e);
-                    });
-                }}
-            >
-                Upload test Excel
-            </button>
+    const [isDarkMode, setIsDarkMode] = useState(false);
+
+    const [modelSrc, setModelSrc] = useState(setupParams.get("model_url"));
+    const [excelSrc, setExcelSrc] = useState(setupParams.get("excel_url"));
+
+    const [scale, setScale] = useState(0);
+    const [coordLng, setCoordLng] = useState(-95.36576714742297);
+    const [coordLat, setCoordLat] = useState(29.76046335699732);
+    const [rotation, setRotation] = useState(0);
+
+    const mapRef = useRef();
+    const modelRef = useRef();
+    const meshRef = useRef();
+
+    const modelProps = {
+        modelRef: modelRef,
+        meshRef: meshRef,
+        scale: scale,
+        setScale: setScale,
+        coordLng: coordLng,
+        setCoordLng: setCoordLng,
+        coordLat: coordLat,
+        setCoordLat: setCoordLat,
+        rotation: rotation,
+        setRotation: setRotation,
+    };
+
+    const srcProps = {
+        modelSrc: modelSrc,
+        setModelSrc: setModelSrc,
+        excelSrc: excelSrc,
+        setExcelSrc: setExcelSrc,
+    }
+
+    return (        
+        <div className="relative w-full min-h-screen overflow-hidden">
+            <ResizableWindows>
+                <BuildingAdjustments
+                    srcProps={srcProps}
+                    isDarkMode={isDarkMode}
+                    mapRef={mapRef}
+                    modelProps={modelProps}
+                />
+                <BuildingForm
+                    srcProps={srcProps}
+                    isDarkMode={isDarkMode}
+                    mapRef={mapRef}
+                    modelProps={modelProps}
+                />
+            </ResizableWindows>
+            <div className="absolute left-4 bottom-4">
+                <ThemeToggle setIsDarkMode={setIsDarkMode} />
+            </div>
         </div>
     );
 }

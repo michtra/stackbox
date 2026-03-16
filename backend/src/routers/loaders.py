@@ -17,7 +17,7 @@ async def upload_context_file(
     building_id: UUID = Query(..., alias="buildingId"),
     floors: int | None = None,
 ):
-    """Upload a file for processing and store it in S3.
+    """(Deprecated) Upload a file for processing and store it in S3.
 
     Args:
         type: File type, either 'stl' or 'xlsx'.
@@ -67,4 +67,24 @@ async def upload_context_file(
     return {
         "detail": f"{file.filename} uploaded successfully.",
         "file": metadata,
+    }
+
+
+@router.post("/api/buildings/metadata", status_code=status.HTTP_200_OK)
+async def get_building_metadata(file: UploadFile = File(...)):
+    """Gets building metadata (building data only) for setup and adjustments."""
+    
+    if not file.filename or not file.filename.endswith('.xlsx'):
+        raise HTTPException(
+            status_code = status.HTTP_400_BAD_REQUEST,
+            detail = "Invalid file type. Only Excel (.xlsx) files are accepted"
+        )
+
+    content = await file.read()
+    file.file.close()
+    
+    result = excelLoader(io.BytesIO(content), isBuildingOnly=True)
+    return {
+        "detail": f"{file.filename} metadata parsed successfully.",
+        "data": result,
     }

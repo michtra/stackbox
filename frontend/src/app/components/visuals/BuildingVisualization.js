@@ -3,7 +3,7 @@
 import { useRef, useEffect } from "react";
 import mapboxgl from "mapbox-gl";
 
-import { proportionBuilding } from "../../utilities/processor";
+import { proportionBuilding } from "@/app/utilities/processor";
 
 /**
  * 
