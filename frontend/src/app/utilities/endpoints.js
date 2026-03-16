@@ -1,7 +1,17 @@
 // TODO: CHange this to use server instead of client
 "use client"
 
+import { getSession } from "next-auth/react";
 import { meterToLatLng } from "@/app/utilities/processor";
+
+/** Returns Authorization header if a session with an access token exists. */
+async function authHeaders() {
+    const session = await getSession();
+    if (session?.accessToken) {
+        return { Authorization: `Bearer ${session.accessToken}` };
+    }
+    return {};
+}
 
 /**
  * (Deprecated) Uploads file to backend using the /uploadfile endpoint.
@@ -106,13 +116,9 @@ async function getBuilding(id) {
 }
 
 async function getBuildingListing(page, limit) {
-    // TODO: Add user ID-based retrieval once Cognito is implemented
-    // This will be done in this order
-    // 1. Frontend function passes access token
-    // 2. Backend uses access token to get OpenID Subject ID (I think companies typically do this with Redis)
-    // 3. Backend uses OpenID Subject ID as a query
     try {
-        const buildingListingResponse = await fetch(`${process.env.NEXT_PUBLIC_SERVER_URL}/api/buildings?page=${page}&limit=${limit}`);
+        const headers = await authHeaders();
+        const buildingListingResponse = await fetch(`${process.env.NEXT_PUBLIC_SERVER_URL}/api/buildings?page=${page}&limit=${limit}`, { headers });
         if (!buildingListingResponse.ok) {
             console.error("Network error when getting building list:", buildingListingResponse.statusText);
             return;
