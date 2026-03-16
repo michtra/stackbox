@@ -22,6 +22,7 @@ from db_models import BuildingModel, TenantModel, FloorModel, OccupancyModel, Ge
 from config import settings
 from routers import loaders
 from utilities.floorplan import FloorGenerator
+from auth import get_current_user, CognitoUser
 import tempfile
 import os
 
@@ -88,6 +89,12 @@ def db_floor_to_pydantic(db_floor: FloorModel) -> Floor:
             ) for occ in db_floor.occupancies
         ]
     )
+
+@app.get("/api/me")
+async def get_me(user: CognitoUser = Depends(get_current_user)):
+    """Get current authenticated user info"""
+    return {"data": {"sub": user.sub, "email": user.email, "name": user.name}}
+
 
 @app.get("/")
 def read_root():
