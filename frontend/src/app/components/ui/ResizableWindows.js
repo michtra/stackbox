@@ -19,7 +19,7 @@ export default function ResizableWindows({ children, className }) {
                 return;
             }
             setSideBarWidth((sideBarWidth) => {
-                const newSideBarWidth = sideBarWidth - e.movementX;
+                const newSideBarWidth = sideBarWidth - (e.movementX / 2);
                 return newSideBarWidth < 500 ? sideBarWidth : newSideBarWidth
             });
         });
