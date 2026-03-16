@@ -1,15 +1,1 @@
 services:
-  postgres:
-    image: postgres:16
-    container_name: stackbox-postgres
-    ports:
-      - "5432:5432"
-    environment:
-      POSTGRES_USER: stackbox_user
-      POSTGRES_PASSWORD: stackbox_password
-      POSTGRES_DB: stackbox
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-
-volumes:
-  pgdata:
