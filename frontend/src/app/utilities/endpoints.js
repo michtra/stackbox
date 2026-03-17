@@ -54,6 +54,7 @@ async function uploadFile(file, type, buildingId, floors = null) {
     formData.append('file', file);
     const response = await fetch(`${process.env.NEXT_PUBLIC_SERVER_URL}/uploadfile?type=${type}&buildingId=${buildingId}${floors !== null ? "&floors=" + floors : ""}`, {
         method: 'POST',
+        headers: await authHeaders(),
         body: formData
     });
     return response;
@@ -70,6 +71,7 @@ async function getBuildingMetadata(excelSrc) {
     formData.append("file", await urlToFile(excelSrc));
     const response = await fetch(`${process.env.NEXT_PUBLIC_SERVER_URL}/api/buildings/metadata`, {
         method: "POST",
+        headers: await authHeaders(),
         body: formData
     });
     return response.data;
@@ -81,6 +83,7 @@ async function createBuilding(modelSrc, excelSrc, metadata) {
         formData.append("building", metadata.building);
         const buildingCreateResponse = await fetch(`${process.env.NEXT_PUBLIC_SERVER_URL}/api/buildings`, {
             method: "POST",
+            headers: await authHeaders(),
             body: formData
         });
 
@@ -101,6 +104,7 @@ async function createBuilding(modelSrc, excelSrc, metadata) {
         stlFormData.append("rotation", metadata.adjustments.rotation);
         const stlUploadResponse = await fetch(`${process.env.NEXT_PUBLIC_SERVER_URL}/api/buildings/${buildingCreateResponse.data.id}/upload/stl`, {
             method: "POST",
+            headers: await authHeaders(),
             body: stlFormData
         });
 
@@ -113,6 +117,7 @@ async function createBuilding(modelSrc, excelSrc, metadata) {
         excelFormData.append("file", await urlToFile(excelSrc));
         const excelUploadResponse = await fetch(`${process.env.NEXT_PUBLIC_SERVER_URL}/api/buildings/${buildingCreateResponse.data.id}/upload/excel`, {
             method: "POST",
+            headers: await authHeaders(),
             body: excelFormData
         });
 
@@ -130,7 +135,9 @@ async function createBuilding(modelSrc, excelSrc, metadata) {
 
 async function getBuilding(id) {
     try {
-        const stackingDataResponse = await fetch(`${process.env.NEXT_PUBLIC_SERVER_URL}/api/buildings/${id}/stacking-plan`);
+        const stackingDataResponse = await fetch(`${process.env.NEXT_PUBLIC_SERVER_URL}/api/buildings/${id}/stacking-plan`, {
+            headers: await authHeaders()
+        });
         if (!stackingDataResponse.ok) {
             console.error("Network error when getting building data:", stackingDataResponse.statusText);
             return;
