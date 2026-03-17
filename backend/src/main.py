@@ -31,6 +31,8 @@ app = FastAPI(title="Stackbox API")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
+    allow_credentials=True,
+    allow_headers=["*"],
 )
 
 def db_building_to_pydantic(db_building: BuildingModel) -> Building:
@@ -92,7 +94,10 @@ def db_floor_to_pydantic(db_floor: FloorModel) -> Floor:
 
 @app.get("/api/me")
 async def get_me(user: CognitoUser = Depends(get_current_user)):
-    """Get current authenticated user info"""
+    """
+    Get current authenticated user info.
+    Use `id_token` instead of `access_token` to access user info.
+    """
     return {"data": {"sub": user.sub, "email": user.email, "name": user.name}}
 
 

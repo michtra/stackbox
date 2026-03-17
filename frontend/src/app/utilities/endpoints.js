@@ -1,17 +1,45 @@
-// TODO: CHange this to use server instead of client
 "use client"
 
 import { getSession } from "next-auth/react";
 import { meterToLatLng } from "@/app/utilities/processor";
 
 /** Returns Authorization header if a session with an access token exists. */
-async function authHeaders() {
+async function authHeaders(isId = false) {
     const session = await getSession();
-    if (session?.accessToken) {
+    if (!isId && session?.accessToken) {
         return { Authorization: `Bearer ${session.accessToken}` };
+    }
+    else if (isId && session?.idToken) {
+        return { Authorization: `Bearer ${session.idToken}` };
     }
     return {};
 }
+
+/** Gets user credentials from current id_token */
+async function getUserCredentials() {
+    const credentials = {
+        sub: "",
+        email: "",
+        name: "",
+    }
+    try {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_SERVER_URL}/api/me`, {
+            method: "GET",
+            headers: await authHeaders(true)
+        });
+        if (response.ok) {
+            return (await response.json()).data
+        }
+        else {
+            console.error("Network error when getting user credential:", response.statusText);
+        }
+    }
+    catch (error) {
+        console.error("Error when getting user credential:", error);
+    }
+    return credentials;
+}
+
 
 /**
  * (Deprecated) Uploads file to backend using the /uploadfile endpoint.
@@ -130,4 +158,4 @@ async function getBuildingListing(page, limit) {
     }
 }
 
-export { urlToFile, createBuilding, getBuilding };
+export { urlToFile, createBuilding, getBuilding, getUserCredentials };

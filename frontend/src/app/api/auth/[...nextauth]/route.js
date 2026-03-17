@@ -14,11 +14,13 @@ const handler = NextAuth({
             // Persist the access token so we can forward it to the backend
             if (account?.access_token) {
                 token.accessToken = account.access_token;
+                token.idToken = account.id_token;
             }
             return token;
         },
         async session({ session, token }) {
             session.accessToken = token.accessToken;
+            session.idToken = token.idToken;
             return session;
         },
     },

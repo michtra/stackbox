@@ -74,7 +74,7 @@ def get_current_user(
     return CognitoUser(
         sub=claims["sub"],
         email=claims.get("email"),
-        name=claims.get("name") or claims.get("cognito:username"),
+        name=f"{claims.get("given_name")} {claims.get("family_name")}".strip() or claims.get("name") or claims.get("cognito:username"),
     )
 
 
@@ -88,5 +88,5 @@ def get_optional_user(
     return CognitoUser(
         sub=claims["sub"],
         email=claims.get("email"),
-        name=claims.get("name") or claims.get("cognito:username"),
+        name=f"{claims.get("given_name")} {claims.get("family_name")}".strip() or claims.get("name") or claims.get("cognito:username"),
     )

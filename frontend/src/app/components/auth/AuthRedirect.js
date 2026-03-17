@@ -8,7 +8,6 @@ export default function AuthRedirect({ children }) {
     const { data: session } = useSession();
 
     useEffect(() => {
-        console.log(session)
         if (session === null) {
             signIn("cognito");
         }

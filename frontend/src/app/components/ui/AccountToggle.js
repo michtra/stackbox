@@ -1,23 +1,32 @@
 "use client"
 
-import { Fragment, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { Menu, MenuItem, Tooltip } from "@mui/material";
 import { AccountCircle } from "@mui/icons-material";
 import { Logout } from "@mui/icons-material";
 import { signOut } from "next-auth/react";
 import clsx from "clsx";
 
+import { getUserCredentials } from "@/app/utilities/endpoints";
+
 export default function AccountToggle({ className }) {
     const [anchorEl, setAnchorEl] = useState();
+    const [userCred, setUserCred] = useState();
     const open = Boolean(anchorEl);
 
     const handleClose = () => {
         setAnchorEl(null);
     }
 
+    useEffect(() => {
+        getUserCredentials().then((credentials) => {
+            setUserCred(credentials);
+        });
+    }, [])
+
     return (
         <Fragment>
-            <Tooltip title="Options" className={clsx(className, "z-50")}>
+            <Tooltip title={userCred?.name} className={clsx(className, "z-50")}>
                 <button
                     className="w-12 h-12 rounded-full bg-white"
                     onClick={(e) => {
@@ -39,6 +48,11 @@ export default function AccountToggle({ className }) {
                 transformOrigin={{ horizontal: 'right', vertical: 'top' }}
                 anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
             >
+                <MenuItem
+                    className="flex flex-row gap-2"
+                >
+                    <span className="text-sm">{userCred?.email}</span>
+                </MenuItem>
                 <MenuItem
                     onClick={() => {
                         signOut();
