@@ -74,7 +74,7 @@ async function getBuildingMetadata(excelSrc) {
         headers: await authHeaders(),
         body: formData
     });
-    return response.data;
+    return (await response.json()).data;
 }
 
 async function createBuilding(modelSrc, excelSrc, metadata) {
@@ -92,6 +92,7 @@ async function createBuilding(modelSrc, excelSrc, metadata) {
             return false;
         }
 
+        const buildingData = (await buildingCreateResponse.json()).data;
         scale = meterToLatLng(metadata.adjustments.scale, metadata.building.location.latitude, metadata.building.location.longitude);
 
         const stlFormData = new FormData();
@@ -102,7 +103,7 @@ async function createBuilding(modelSrc, excelSrc, metadata) {
         stlFormData.append("scaleX", scale.lng);
         stlFormData.append("scaleY", scale.lat);
         stlFormData.append("rotation", metadata.adjustments.rotation);
-        const stlUploadResponse = await fetch(`${process.env.NEXT_PUBLIC_SERVER_URL}/api/buildings/${buildingCreateResponse.data.id}/upload/stl`, {
+        const stlUploadResponse = await fetch(`${process.env.NEXT_PUBLIC_SERVER_URL}/api/buildings/${buildingData.id}/upload/stl`, {
             method: "POST",
             headers: await authHeaders(),
             body: stlFormData
@@ -142,7 +143,7 @@ async function getBuilding(id) {
             console.error("Network error when getting building data:", stackingDataResponse.statusText);
             return;
         }
-        return stackingDataResponse.data;
+        return (await stackingDataResponse.json()).data;
     }
     catch (error) {
         console.error("Error when creating building:", error);
@@ -158,11 +159,11 @@ async function getBuildingListing(page, limit) {
             console.error("Network error when getting building list:", buildingListingResponse.statusText);
             return;
         }
-        return buildingListingResponse;
+        return await buildingListingResponse.json();
     }
     catch (error) {
         console.error("Error when getting building list:", error);
     }
 }
 
-export { urlToFile, createBuilding, getBuilding, getUserCredentials };
+export { urlToFile, createBuilding, getBuilding, getBuildingListing, getUserCredentials };
