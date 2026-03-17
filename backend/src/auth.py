@@ -43,13 +43,28 @@ def _validate_token(token: str) -> dict:
         )
     try:
         jwks = _get_jwks()
-        claims = jwt.decode(
-            token,
-            jwks,
-            algorithms=["RS256"],
-            audience=settings.cognito_client_id,
-            options={"verify_at_hash": False},
-        )
+        unverified = jwt.get_unverified_claims(token)
+        token_use = unverified.get("token_use", "")
+
+        if token_use == "access":
+            # Access tokens don't carry aud; validate client_id claim instead
+            claims = jwt.decode(
+                token,
+                jwks,
+                algorithms=["RS256"],
+                options={"verify_aud": False, "verify_at_hash": False},
+            )
+            if claims.get("client_id") != settings.cognito_client_id:
+                raise JWTError("client_id mismatch")
+        else:
+            # id_token has aud == client_id
+            claims = jwt.decode(
+                token,
+                jwks,
+                algorithms=["RS256"],
+                audience=settings.cognito_client_id,
+                options={"verify_at_hash": False},
+            )
     except JWTError as e:
         logger.warning("JWT validation failed: %s", e)
         raise HTTPException(
@@ -74,7 +89,7 @@ def get_current_user(
     return CognitoUser(
         sub=claims["sub"],
         email=claims.get("email"),
-        name=f"{claims.get("given_name")} {claims.get("family_name")}".strip() or claims.get("name") or claims.get("cognito:username"),
+        name=f"{claims.get('given_name')} {claims.get('family_name')}".strip() or claims.get("name") or claims.get("cognito:username") or claims.get("username"),
     )
 
 
@@ -88,5 +103,5 @@ def get_optional_user(
     return CognitoUser(
         sub=claims["sub"],
         email=claims.get("email"),
-        name=f"{claims.get("given_name")} {claims.get("family_name")}".strip() or claims.get("name") or claims.get("cognito:username"),
+        name=f"{claims.get('given_name')} {claims.get('family_name')}".strip() or claims.get("name") or claims.get("cognito:username") or claims.get("username"),
     )
