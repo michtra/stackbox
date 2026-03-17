@@ -56,7 +56,7 @@ export default function AccountToggle({ className }) {
                 <MenuItem
                     onClick={() => {
                         signOut();
-                        handleClose.apply();
+                        handleClose();
                     }}
                     className="flex flex-row gap-2"
                 >
