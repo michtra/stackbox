@@ -19,6 +19,10 @@ class Settings(BaseSettings):
     cognito_user_pool_id: str | None = None
     cognito_client_id: str | None = None
 
+    # Rate Limiting
+    rate_limit_uploads: str = "10/minute"   # applied per user to STL + Excel upload endpoints
+    rate_limit_buildings: str = "30/minute" # applied per user to building creation
+
     # Upload Configuration
     presigned_url_expiration: int = 300  # 5 minutes, assumes STL files are small (few MB)
 
