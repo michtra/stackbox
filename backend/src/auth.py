@@ -75,6 +75,17 @@ def _validate_token(token: str) -> dict:
     return claims
 
 
+def _build_cognito_user(claims: dict) -> CognitoUser:
+    """Construct a CognitoUser from validated JWT claims. Single source of truth for name resolution."""
+    name = (
+        f"{claims.get('given_name')} {claims.get('family_name')}".strip()
+        or claims.get("name")
+        or claims.get("cognito:username")
+        or claims.get("username")
+    )
+    return CognitoUser(sub=claims["sub"], email=claims.get("email"), name=name)
+
+
 def get_current_user(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(bearer_scheme),
 ) -> CognitoUser:
@@ -86,11 +97,7 @@ def get_current_user(
             headers={"WWW-Authenticate": "Bearer"},
         )
     claims = _validate_token(credentials.credentials)
-    return CognitoUser(
-        sub=claims["sub"],
-        email=claims.get("email"),
-        name=f"{claims.get('given_name')} {claims.get('family_name')}".strip() or claims.get("name") or claims.get("cognito:username") or claims.get("username"),
-    )
+    return _build_cognito_user(claims)
 
 
 def get_optional_user(
@@ -100,8 +107,4 @@ def get_optional_user(
     if not credentials:
         return None
     claims = _validate_token(credentials.credentials)
-    return CognitoUser(
-        sub=claims["sub"],
-        email=claims.get("email"),
-        name=f"{claims.get('given_name')} {claims.get('family_name')}".strip() or claims.get("name") or claims.get("cognito:username") or claims.get("username"),
-    )
+    return _build_cognito_user(claims)
