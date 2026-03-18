@@ -68,6 +68,7 @@ def db_tenant_to_pydantic(db_tenant: TenantModel) -> Tenant:
             email = cast(str, db_tenant.contact_email),
             phone = cast(str, db_tenant.contact_phone)
         ),
+        color = cast(str, db_tenant.color) if db_tenant.color is not None else None,
         createdAt = cast(datetime, db_tenant.created_at),
         updatedAt = cast(datetime, db_tenant.updated_at)
     )
@@ -295,7 +296,8 @@ async def create_tenant(tenant: TenantCreate, db: Session = Depends(get_db)):
     db_tenant = TenantModel(
         name = tenant.name,
         contact_email = tenant.contact.email,
-        contact_phone = tenant.contact.phone
+        contact_phone = tenant.contact.phone,
+        color = tenant.color
     )
     try:
         db.add(db_tenant)
@@ -336,6 +338,8 @@ async def update_tenant(id: UUID, tenant: TenantUpdate, db: Session = Depends(ge
             db_tenant.contact_email = tenant.contact.email
         if tenant.contact.phone is not None:
             db_tenant.contact_phone = tenant.contact.phone
+    if tenant.color is not None:
+        db_tenant.color = tenant.color
 
     setattr(db_tenant, 'updated_at', datetime.utcnow())
     try:

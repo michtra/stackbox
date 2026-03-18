@@ -3,9 +3,11 @@ Pydantic models for Stackbox API
 """
 
 from datetime import datetime
-from typing import Optional, List, Literal
+from typing import Optional, List, Literal, Annotated
 from uuid import UUID
 from pydantic import BaseModel, Field, EmailStr
+
+HexColor = Annotated[str, Field(pattern=r"^#[0-9A-Fa-f]{6}$")]
 
 
 class Address(BaseModel):
@@ -70,6 +72,7 @@ class Tenant(BaseModel):
     id: UUID
     name: str
     contact: Contact
+    color: Optional[HexColor] = None
     createdAt: datetime
     updatedAt: datetime
 
@@ -78,12 +81,14 @@ class TenantCreate(BaseModel):
     """Model for creating a new tenant (without id and timestamps)"""
     name: str
     contact: Contact
+    color: Optional[HexColor] = None
 
 
 class TenantUpdate(BaseModel):
     """Model for updating a tenant (partial update allowed)"""
     name: Optional[str] = None
     contact: Optional[Contact] = None
+    color: Optional[HexColor] = None
 
 
 class GeoJSONGeometry(BaseModel):
