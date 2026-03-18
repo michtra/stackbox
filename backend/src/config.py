@@ -22,6 +22,9 @@ class Settings(BaseSettings):
     # Rate Limiting
     rate_limit_uploads: str = "10/minute"   # applied per user to STL + Excel upload endpoints
     rate_limit_buildings: str = "30/minute" # applied per user to building creation
+    # Use "memory://" for single-process dev. Point at Redis in production to share
+    # counters across workers: e.g. "redis://localhost:6379/0"
+    rate_limit_storage_uri: str = "memory://"
 
     # Upload Configuration
     presigned_url_expiration: int = 300  # 5 minutes, assumes STL files are small (few MB)

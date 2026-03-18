@@ -26,9 +26,12 @@ from db_models import BuildingModel, TenantModel, FloorModel, OccupancyModel, Ge
 from config import settings
 from routers import loaders
 from utilities.floorplan import FloorGenerator
-from auth import get_current_user, get_optional_user, CognitoUser
+from auth import get_current_user, get_optional_user, CognitoUser, _build_cognito_user
 import tempfile
 import os
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def _rate_limit_key(request: Request) -> str:
@@ -39,7 +42,7 @@ def _rate_limit_key(request: Request) -> str:
     return get_remote_address(request)
 
 
-limiter = Limiter(key_func=_rate_limit_key)
+limiter = Limiter(key_func=_rate_limit_key, storage_uri=settings.rate_limit_storage_uri)
 
 app = FastAPI(title="Stackbox API")
 app.state.limiter = limiter
@@ -65,13 +68,11 @@ async def attach_user_to_request(request: Request, call_next):
         token = auth_header[7:]
         try:
             claims = _validate_token(token)
-            request.state.rate_limit_user = CognitoUser(
-                sub=claims["sub"],
-                email=claims.get("email"),
-                name=claims.get("name") or claims.get("cognito:username"),
-            )
-        except Exception:
-            pass  # invalid token — rate-limit by IP, let the endpoint reject it properly
+            request.state.rate_limit_user = _build_cognito_user(claims)
+        except Exception as e:
+            # Invalid/expired token or auth not configured — fall back to IP keying.
+            # The endpoint's own auth dependency will reject the request with a proper 401.
+            logger.debug("Rate limit middleware: could not resolve user from token: %s", e)
     return await call_next(request)
 
 
