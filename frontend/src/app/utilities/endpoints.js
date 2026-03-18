@@ -60,12 +60,22 @@ async function uploadFile(file, type, buildingId, floors = null) {
     return response;
 }
 
+/**
+ * Converts Blob URL into File object.
+ * @param {string} url Blob URL of file.
+ * @returns File object.
+ */
 async function urlToFile(url) {
     const response = await fetch(url);
     const blob = await response.blob();
     return new File([blob], "", blob.type);
 }
 
+/**
+ * Gets building metadata without processing the entire Excel file.
+ * @param {string} excelSrc Blob URL of Excel file.
+ * @returns Metadata ("building" part of StackingPlan model) of the building according to the Excel data.
+ */
 async function getBuildingMetadata(excelSrc) {
     const formData = new FormData();
     formData.append("file", await urlToFile(excelSrc));
@@ -77,6 +87,15 @@ async function getBuildingMetadata(excelSrc) {
     return (await response.json()).data;
 }
 
+/**
+ * Uploads STL and Excel files to S3. Creates building in RDS.
+ * @param {string} modelSrc Blob URL of STL file.
+ * @param {string} excelSrc Blob URL of Excel file.
+ * @param {Object} metadata Data required as input to create a building.
+ * @param {Object} metadata.building The "building" part of StackingPlan model.
+ * @param {boolean} metadata.adjustments 3D model adjustments data.
+ * @returns 
+ */
 async function createBuilding(modelSrc, excelSrc, metadata) {
     try {
         const formData = new FormData();
@@ -134,6 +153,11 @@ async function createBuilding(modelSrc, excelSrc, metadata) {
     return true;
 }
 
+/**
+ * Gets building data according to StackingPlan model.
+ * @param {string} id UUID of building.
+ * @returns Undefined if error, StackingPlan model if successful.
+ */
 async function getBuilding(id) {
     try {
         const stackingDataResponse = await fetch(`${process.env.NEXT_PUBLIC_SERVER_URL}/api/buildings/${id}/stacking-plan`, {
@@ -151,6 +175,12 @@ async function getBuilding(id) {
     }
 }
 
+/**
+ * Provides listing data. Has pagination.
+ * @param {int} page Current page number.
+ * @param {int} limit Max number of buildings on one page.
+ * @returns Pagination data according to BuildingListResponse.
+ */
 async function getBuildingListing(page, limit) {
     try {
         const headers = await authHeaders();

@@ -21,10 +21,12 @@ from database import get_db
 from db_models import BuildingModel, TenantModel, FloorModel, OccupancyModel, GeometryModel
 from config import settings
 from routers import loaders
-from utilities.floorplan import FloorGenerator
+from utilities.floor_plan import FloorGenerator
 from auth import get_current_user, CognitoUser
+from utilities.file_loader import excel_loader
 import tempfile
 import os
+import io
 
 app = FastAPI(title="Stackbox API")
 
@@ -201,6 +203,25 @@ async def get_building(id: UUID, db: Session = Depends(get_db), user: CognitoUse
             detail="Building not found"
         )
     return BuildingResponse(data=db_building_to_pydantic(building))
+
+@app.post("/api/buildings/metadata", status_code=status.HTTP_200_OK)
+async def get_building_metadata(file: UploadFile = File(...)):
+    """Gets building metadata (building data only) for setup and adjustments."""
+    
+    if not file.filename or not file.filename.endswith('.xlsx'):
+        raise HTTPException(
+            status_code = status.HTTP_400_BAD_REQUEST,
+            detail = "Invalid file type. Only Excel (.xlsx) files are accepted"
+        )
+
+    content = await file.read()
+    file.file.close()
+    
+    result = excel_loader(io.BytesIO(content), isBuildingOnly=True)
+    return {
+        "detail": f"{file.filename} metadata parsed successfully.",
+        "data": result,
+    }
 
 @app.put("/api/buildings/{id}", response_model=BuildingResponse)
 async def update_building(id: UUID, building: BuildingUpdate, db: Session = Depends(get_db), user: CognitoUser = Depends(get_current_user)):

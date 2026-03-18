@@ -6,11 +6,11 @@ from datetime import datetime
 
 import pandas as pd
 
-from utilities.floorplan import FloorGenerator
+from utilities.floor_plan import FloorGenerator
 from utilities.file_storage import save_processed_json
 
 
-def excelLoader(filepath: Union[str, io.BytesIO], isBuildingOnly=False) -> dict:
+def excel_loader(filepath: Union[str, io.BytesIO], isBuildingOnly=False) -> dict:
     """Parse a stacking plan Excel file and convert to the StackingPlan JSON schema.
 
     Expects an Excel file with two sheets:
@@ -169,8 +169,8 @@ def excelLoader(filepath: Union[str, io.BytesIO], isBuildingOnly=False) -> dict:
     return stacking_plan
 
 
-def stackplanLoader(filepath, floors, building_id: UUID):
-    """Processes a 3D model file and saves extracted floor coordinates as JSON.
+def stackplan_loader(filepath, floors, building_id: UUID):
+    """(Deprecated) Processes a 3D model file and saves extracted floor coordinates as JSON.
 
     Args:
         filepath: Path to the 3D model file.
