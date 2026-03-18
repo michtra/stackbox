@@ -1,7 +1,11 @@
 from typing import Optional, List, Union, cast
 from uuid import UUID, uuid4
-from fastapi import Depends, FastAPI, HTTPException, Query, Path, UploadFile, File, Form, status
+from fastapi import Depends, FastAPI, HTTPException, Query, Path, Request, UploadFile, File, Form, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.util import get_remote_address
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from datetime import datetime
@@ -22,11 +26,24 @@ from db_models import BuildingModel, TenantModel, FloorModel, OccupancyModel, Ge
 from config import settings
 from routers import loaders
 from utilities.floorplan import FloorGenerator
-from auth import get_current_user, CognitoUser
+from auth import get_current_user, get_optional_user, CognitoUser
 import tempfile
 import os
 
+
+def _rate_limit_key(request: Request) -> str:
+    """Key function: use Cognito sub if authenticated, otherwise fall back to IP."""
+    user: Optional[CognitoUser] = getattr(request.state, "rate_limit_user", None)
+    if user:
+        return user.sub
+    return get_remote_address(request)
+
+
+limiter = Limiter(key_func=_rate_limit_key)
+
 app = FastAPI(title="Stackbox API")
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 app.add_middleware(
     CORSMiddleware,
