@@ -53,6 +53,28 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+@app.middleware("http")
+async def attach_user_to_request(request: Request, call_next):
+    """Resolve optional auth token early so _rate_limit_key can use the Cognito sub."""
+    from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+    from auth import _validate_token
+    request.state.rate_limit_user = None
+    auth_header = request.headers.get("Authorization", "")
+    if auth_header.startswith("Bearer "):
+        token = auth_header[7:]
+        try:
+            claims = _validate_token(token)
+            request.state.rate_limit_user = CognitoUser(
+                sub=claims["sub"],
+                email=claims.get("email"),
+                name=claims.get("name") or claims.get("cognito:username"),
+            )
+        except Exception:
+            pass  # invalid token — rate-limit by IP, let the endpoint reject it properly
+    return await call_next(request)
+
+
 def db_building_to_pydantic(db_building: BuildingModel) -> Building:
     """Converting database building model to Pydantic model"""
     return Building(
@@ -157,7 +179,8 @@ async def list_buildings(
     )
 
 @app.post("/api/buildings", status_code=201, response_model=BuildingResponse)
-async def create_building(building: BuildingCreate, db: Session = Depends(get_db), user: CognitoUser = Depends(get_current_user)):
+@limiter.limit(settings.rate_limit_buildings)
+async def create_building(request: Request, building: BuildingCreate, db: Session = Depends(get_db), user: CognitoUser = Depends(get_current_user)):
     """Create a new building"""
     existing = db.query(BuildingModel).filter(
         BuildingModel.name == building.name,
@@ -628,7 +651,9 @@ async def remove_occupancy(id: UUID, floorNumber: int, tenantId: UUID, db: Sessi
 
 # File Uploads
 @app.post("/api/buildings/{id}/upload/stl", response_model=UploadJobResponse)
+@limiter.limit(settings.rate_limit_uploads)
 async def upload_stl(
+    request: Request,
     id: UUID,
     file: UploadFile = File(...),
     floorHeight: float = Form(...),
@@ -702,7 +727,8 @@ async def upload_stl(
     })
 
 @app.post("/api/buildings/{id}/upload/excel", response_model=UploadJobResponse)
-async def upload_excel(id: UUID, file: UploadFile = File(...), db: Session = Depends(get_db), user: CognitoUser = Depends(get_current_user)):
+@limiter.limit(settings.rate_limit_uploads)
+async def upload_excel(request: Request, id: UUID, file: UploadFile = File(...), db: Session = Depends(get_db), user: CognitoUser = Depends(get_current_user)):
     """Upload Excel file with stacking plan data"""
     db_building = db.query(BuildingModel).filter(BuildingModel.id == id).first()
 
