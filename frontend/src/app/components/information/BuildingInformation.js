@@ -1,12 +1,13 @@
 "use client"
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import clsx from "clsx";
 import { Menu, MenuItem } from "@mui/material";
 import { KeyboardArrowDown } from "@mui/icons-material";
 
 import BuildingStatistics from "@/app/components/information/BuildingStatistics";
 import BuildingComposition from "@/app/components/information/BuildingComposition";
+import TenantColors from "@/app/components/information/TenantColors";
 
 /**
  * 
@@ -134,6 +135,14 @@ export default function BuildingInformation({ stackingData, isDarkMode }) {
                             >
                                 Tenant Composition
                             </MenuItem>
+                            <MenuItem
+                                onClick={() => {
+                                    setSelectedTab("Tenant Colors");
+                                    setAnchorEl(null);
+                                }}
+                            >
+                                Tenant Colors
+                            </MenuItem>
                         </Menu>
                     </div>
                     <div className="w-48 h-10 flex flex-row bg-black/10 dark:bg-white/10 p-1 rounded-lg">
@@ -157,6 +166,9 @@ export default function BuildingInformation({ stackingData, isDarkMode }) {
                     )}
                     {selectedTab === "Tenant Composition" && (
                         <BuildingComposition stackingData={stackingData} isDarkMode={isDarkMode} timeUnit={timeUnit} rentalData={rentalData} />
+                    )}
+                    {selectedTab === "Tenant Colors" && (
+                        <TenantColors stackingData={stackingData} />
                     )}
                 </div>
             </div>
