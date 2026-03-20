@@ -1,4 +1,4 @@
-from typing import Optional, List, Union, cast
+from typing import Optional, List, Union, cast, Annotated
 from uuid import UUID, uuid4
 from fastapi import Depends, FastAPI, HTTPException, Query, Path, UploadFile, File, Form, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 from datetime import datetime
 import math
+import json
 
 from models import (
     Building, BuildingCreate, BuildingUpdate, BuildingListResponse, BuildingResponse,
@@ -18,7 +19,7 @@ from models import (
 )
 from utilities.file_storage import save_upload, delete_upload
 from database import get_db
-from db_models import BuildingModel, TenantModel, FloorModel, OccupancyModel, GeometryModel
+from db_models import BuildingModel, TenantModel, FloorModel, OccupancyModel, FileModel, UserModel, PropertyManagerModel
 from config import settings
 from routers import loaders
 from utilities.floor_plan import FloorGenerator
@@ -143,8 +144,9 @@ async def list_buildings(
     )
 
 @app.post("/api/buildings", status_code=201, response_model=BuildingResponse)
-async def create_building(building: BuildingCreate, db: Session = Depends(get_db), user: CognitoUser = Depends(get_current_user)):
+async def create_building(building: Annotated[str, Form()], db: Session = Depends(get_db), user: CognitoUser = Depends(get_current_user)):
     """Create a new building"""
+    building = BuildingCreate.model_validate_json(building)
     existing = db.query(BuildingModel).filter(
         BuildingModel.name == building.name,
         BuildingModel.address_city == building.address.city
@@ -172,6 +174,7 @@ async def create_building(building: BuildingCreate, db: Session = Depends(get_db
         gross_square_feet=building.metadata.grossSquareFeet,
         year_built=building.metadata.yearBuilt
     )
+    
     try:
         db.add(db_building)
         db.commit()
@@ -191,6 +194,23 @@ async def create_building(building: BuildingCreate, db: Session = Depends(get_db
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to create building: {str(e)}"
         )
+    
+    # Add current user as property manager
+    db_property_manager = PropertyManagerModel(
+        user_id=user.id,
+        building_id=db_building.id,
+    )
+    
+    try:
+        db.add(db_property_manager)
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to assign property manager: {str(e)}"
+        )
+    
     return BuildingResponse(data=db_building_to_pydantic(db_building))
 
 @app.get("/api/buildings/{id}", response_model=BuildingResponse)
@@ -639,12 +659,12 @@ async def remove_occupancy(id: UUID, floorNumber: int, tenantId: UUID, db: Sessi
 async def upload_stl(
     id: UUID,
     file: UploadFile = File(...),
-    floorHeight: float = Form(...),
     baseElevation: float = Form(...),
     centerX: Optional[float] = Form(None),
     centerY: Optional[float] = Form(None),
     scaleX: float = Form(1.0),
     scaleY: float = Form(1.0),
+    scaleZ: float = Form(1.0),
     rotation: float = Form(0.0),
     db: Session = Depends(get_db),
     user: CognitoUser = Depends(get_current_user)
@@ -668,7 +688,20 @@ async def upload_stl(
     file.file.close()
 
     try:
-        metadata = save_upload(id, "stl", file.filename, content)
+        model_file_metadata = save_upload(id, "stl", file.filename, content)
+        db_model_file = FileModel(
+            building_id=id,
+            file_type="stl",
+            file_path=model_file_metadata["s3_key"],
+            original_filename=model_file_metadata["original_filename"],
+            file_size=model_file_metadata["file_size"],
+            status="uploaded",
+            created_at=datetime.fromtimestamp(model_file_metadata["timestamp"] / 1e9),
+            processed_at=datetime.fromtimestamp(model_file_metadata["timestamp"] / 1e9),
+        )
+        db.add(db_model_file)
+        db.commit()
+        db.refresh(db_model_file)
 
         # FloorGenerator needs a file path for trimesh.load_mesh()
         suffix = os.path.splitext(file.filename)[1]
@@ -678,7 +711,7 @@ async def upload_stl(
 
         try:
             center = (centerX, centerY) if centerX is not None and centerY is not None else None
-            scale = (scaleX, scaleY) if scaleX is not None and scaleY is not None else None
+            scale = (scaleX, scaleY, scaleZ) if scaleX is not None and scaleY is not None and scaleZ is not None else None
 
             generator = FloorGenerator(
                 model=tmp_path,
@@ -689,8 +722,22 @@ async def upload_stl(
                 rotation=rotation
             )
             generator.generateFloors()
+            process_metadata = save_upload(id, "processed", "floors.json", json.dumps(generator.getCoords(), indent=4))
+            db_model_file = FileModel(
+                building_id=id,
+                file_type="processed_json",
+                file_path=process_metadata["s3_key"],
+                original_filename=process_metadata["original_filename"],
+                file_size=process_metadata["file_size"],
+                status="uploaded",
+                created_at=datetime.fromtimestamp(model_file_metadata["timestamp"] / 1e9),
+                processed_at=datetime.fromtimestamp(model_file_metadata["timestamp"] / 1e9),
+            )
+            db.add(db_model_file)
+            db.commit()
+            db.refresh(db_model_file)
         except Exception:
-            delete_upload(metadata["s3_key"])
+            delete_upload(model_file_metadata["s3_key"])
             raise
         finally:
             os.unlink(tmp_path)
@@ -706,7 +753,8 @@ async def upload_stl(
         "jobId": job_id,
         "status": "processing",
         "message": f"Processing STL file for building {db_building.name}...",
-        "s3Key": metadata["s3_key"],
+        "modelFileS3Key": model_file_metadata["s3_key"],
+        "processS3Key": process_metadata["s3_key"],
     })
 
 @app.post("/api/buildings/{id}/upload/excel", response_model=UploadJobResponse)

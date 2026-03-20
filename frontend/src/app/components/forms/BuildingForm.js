@@ -1,13 +1,13 @@
 "use client"
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import clsx from "clsx";
 import { Slider } from "@mui/material";
 import { Upload } from "@mui/icons-material";
 import { Apartment } from "@mui/icons-material";
 import { ListAlt } from "@mui/icons-material";
 
-import { urlToFile } from "@/app/utilities/endpoints";
+import { createBuilding, getBuildingMetadata } from "@/app/utilities/endpoints";
 import NumberInput from "@/app/components/ui/NumberInput";
 import { loadAdjustmentsBuildingMesh } from "@/app/utilities/processor";
 
@@ -18,9 +18,49 @@ export default function BuildingForm({ srcProps, isDarkMode, mapRef, modelProps 
     const [excelFileName, setExcelFileName] = useState();
     const [modelFileURL, setModelFileURL] = useState();
     const [excelFileURL, setExcelFileURL] = useState();
+    const [buildingMetadata, setBuildingMetadata] = useState();
+
+    const handleSubmit = async () => {
+        if (srcProps.modelSrc && srcProps.excelSrc) {
+            console.log(srcProps.modelSrc);
+            console.log(srcProps.excelSrc);
+            const metadata = {
+                building: buildingMetadata,
+                adjustments: {
+                    scale: modelProps.scale,
+                    rotation: modelProps.rotation
+                }
+            };
+            console.log(metadata)
+            // TODO: Cache building metadata somewhere.
+            createBuilding(srcProps.modelSrc, srcProps.excelSrc, metadata);
+        }
+    }
+
+    useEffect(() => {
+        getBuildingMetadata(srcProps.excelSrc).then((val) => {
+            setBuildingMetadata(val);
+        });
+    }, []);
 
     return (
         <div className="flex flex-col w-full h-full p-6 gap-8 overflow-y-scroll">
+            <div className="flex flex-col gap-2">
+                <span>Name of Building</span>
+                <input
+                    type="text"
+                    className="p-2 gap-2 outline rounded-sm focus-within:outline-blue-500 focus-within:outline-2"
+                    value={buildingMetadata?.name ? buildingMetadata.name : ""}
+                    onChange={(e) => {
+                        setBuildingMetadata((val) => {
+                            return {
+                                ...val,
+                                name: e.target.value,
+                            }
+                        });
+                    }}
+                />
+            </div>
             <div className="flex flex-col">
                 <span>Scale</span>
                 <Slider
@@ -190,10 +230,7 @@ export default function BuildingForm({ srcProps, isDarkMode, mapRef, modelProps 
             <button
                 className="flex flex-col justify-center items-center w-full h-12 p-2 gap-2 outline rounded-sm cursor-pointer hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-all"
                 onClick={() => {
-                    if (srcProps.modelSrc && srcProps.excelSrc) {
-                        console.log(srcProps.modelSrc);
-                        console.log(srcProps.excelSrc);
-                    }
+                    handleSubmit();
                 }}
             >
                 Submit

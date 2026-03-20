@@ -65,26 +65,41 @@ async function uploadFile(file, type, buildingId, floors = null) {
  * @param {string} url Blob URL of file.
  * @returns File object.
  */
-async function urlToFile(url) {
+async function urlToFile(url, ext) {
     const response = await fetch(url);
     const blob = await response.blob();
-    return new File([blob], "", blob.type);
+    return new File([blob], `building.${ext}`, { type: blob.type });
 }
 
 /**
- * Gets building metadata without processing the entire Excel file.
+ * Checks whether Blob URL is valid.
+ * @param {string} url Blob URL of file.
+ * @returns Whether Blob is still in memory.
+ */
+async function isBlobUrlValid(url) {
+    try {
+        const response = await fetch(url);
+        return response.ok;
+    }
+    catch (e) {
+        return false;
+    }
+}
+
+/**
+ * Gets building metadata without processing the entire Excel file. Used for retrieving STL upload queries like initial center coords and number of floors.
  * @param {string} excelSrc Blob URL of Excel file.
  * @returns Metadata ("building" part of StackingPlan model) of the building according to the Excel data.
  */
 async function getBuildingMetadata(excelSrc) {
     const formData = new FormData();
-    formData.append("file", await urlToFile(excelSrc));
+    formData.append("file", await urlToFile(excelSrc, "xlsx"));
     const response = await fetch(`${process.env.NEXT_PUBLIC_SERVER_URL}/api/buildings/metadata`, {
         method: "POST",
         headers: await authHeaders(),
         body: formData
     });
-    return (await response.json()).data;
+    return (await response.json()).data.building;
 }
 
 /**
@@ -93,13 +108,15 @@ async function getBuildingMetadata(excelSrc) {
  * @param {string} excelSrc Blob URL of Excel file.
  * @param {Object} metadata Data required as input to create a building.
  * @param {Object} metadata.building The "building" part of StackingPlan model.
- * @param {boolean} metadata.adjustments 3D model adjustments data.
+ * @param {Object} metadata.adjustments 3D model adjustments data.
+ * @param {float} metadata.adjustments.scale 3D model scale (map scale to model scale).
+ * @param {float} metadata.adjustments.rotation 3D model rotation (degrees).
  * @returns 
  */
 async function createBuilding(modelSrc, excelSrc, metadata) {
     try {
         const formData = new FormData();
-        formData.append("building", metadata.building);
+        formData.append("building", JSON.stringify(metadata.building));
         const buildingCreateResponse = await fetch(`${process.env.NEXT_PUBLIC_SERVER_URL}/api/buildings`, {
             method: "POST",
             headers: await authHeaders(),
@@ -112,15 +129,16 @@ async function createBuilding(modelSrc, excelSrc, metadata) {
         }
 
         const buildingData = (await buildingCreateResponse.json()).data;
-        scale = meterToLatLng(metadata.adjustments.scale, metadata.building.location.latitude, metadata.building.location.longitude);
+        const scale = meterToLatLng(metadata.adjustments.scale, metadata.building.location.latitude);
 
         const stlFormData = new FormData();
-        stlFormData.append("file", await urlToFile(modelSrc));
+        stlFormData.append("file", await urlToFile(modelSrc, "stl"));
         stlFormData.append("baseElevation", 0); // Trimesh already sets min height as 0 height. Although, maybe I'll do something with this query.
         stlFormData.append("centerX", metadata.building.location.longitude);
         stlFormData.append("centerY", metadata.building.location.latitude);
         stlFormData.append("scaleX", scale.lng);
         stlFormData.append("scaleY", scale.lat);
+        stlFormData.append("scaleZ", metadata.adjustments.scale);
         stlFormData.append("rotation", metadata.adjustments.rotation);
         const stlUploadResponse = await fetch(`${process.env.NEXT_PUBLIC_SERVER_URL}/api/buildings/${buildingData.id}/upload/stl`, {
             method: "POST",
@@ -134,8 +152,8 @@ async function createBuilding(modelSrc, excelSrc, metadata) {
         }
 
         const excelFormData = new FormData();
-        excelFormData.append("file", await urlToFile(excelSrc));
-        const excelUploadResponse = await fetch(`${process.env.NEXT_PUBLIC_SERVER_URL}/api/buildings/${buildingCreateResponse.data.id}/upload/excel`, {
+        excelFormData.append("file", await urlToFile(excelSrc, "xlsx"));
+        const excelUploadResponse = await fetch(`${process.env.NEXT_PUBLIC_SERVER_URL}/api/buildings/${buildingData.id}/upload/excel`, {
             method: "POST",
             headers: await authHeaders(),
             body: excelFormData
@@ -196,4 +214,4 @@ async function getBuildingListing(page, limit) {
     }
 }
 
-export { urlToFile, createBuilding, getBuilding, getBuildingListing, getUserCredentials };
+export { urlToFile, createBuilding, getBuilding, getBuildingListing, getUserCredentials, getBuildingMetadata, isBlobUrlValid };

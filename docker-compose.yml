@@ -1,0 +1,24 @@
+services:
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: DockerFile
+    working_dir: /app
+    volumes:
+      - ./frontend:/app
+    ports:
+      - "3000:3000"
+    environment:
+      - WATCHPACK_POLLING=true
+    command: ["sh", "-c", "npm install && npm run dev"]
+  
+  backend:
+    build:
+      context: ./backend
+      dockerfile: DockerFile
+    working_dir: /app
+    volumes:
+      - ./backend:/app
+    ports:
+      - "8000:8000"
+    command: ["sh", "-c", "pip install -r ./requirements.txt && fastapi dev src/main.py"]

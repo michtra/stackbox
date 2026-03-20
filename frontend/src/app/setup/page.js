@@ -1,12 +1,13 @@
 "use client"
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import BuildingAdjustments from "@/app/components/visuals/BuildingAdjustments";
 import ResizableWindows from "@/app/components/ui/ResizableWindows";
 import BuildingForm from "@/app/components/forms/BuildingForm";
 import ThemeToggle from "@/app/components/ui/ThemeToggle";
+import { isBlobUrlValid } from "@/app/utilities/endpoints";
 
 export default function Page() {
     const router = useRouter();
@@ -45,6 +46,15 @@ export default function Page() {
         excelSrc: excelSrc,
         setExcelSrc: setExcelSrc,
     }
+
+    useEffect(() => {
+        async function checkBlobValid() {
+            if (!(await isBlobUrlValid(modelSrc)) || !(await isBlobUrlValid(excelSrc))) {
+                router.push("/");
+            }
+        }
+        checkBlobValid();
+    }, []);
 
     return (        
         <div className="relative w-full min-h-screen overflow-hidden">

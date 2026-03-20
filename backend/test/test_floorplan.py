@@ -10,7 +10,7 @@ import math
 # Add the parent directory to the path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from src.utilities.floorplan import FloorGenerator
+from utilities.floor_plan import FloorGenerator
 
 def test_floor_generator_offset(center, scale, rotation):
     generator = FloorGenerator(
@@ -41,5 +41,5 @@ def test_floor_generator_default():
     print("✓ Floor generation works")
 
 if __name__ == "__main__":
-    test_floor_generator_offset((-90, 30), (0.0001, 0.0001), 45)
+    test_floor_generator_offset((-90, 30), (0.0001, 0.0001, 1.0), 45)
     test_floor_generator_default()
