@@ -3,7 +3,7 @@ from uuid import UUID, uuid4
 from fastapi import Depends, FastAPI, HTTPException, Query, Path, UploadFile, File, Form, status
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy import func, select
 from datetime import datetime
 import math
 import json
@@ -124,14 +124,18 @@ async def list_buildings(
     user: CognitoUser = Depends(get_current_user)
 ):
     """List all buildings with pagination"""
-    query = db.query(BuildingModel)
+    building_query = select(BuildingModel) \
+                        .join(PropertyManagerModel, BuildingModel.id == PropertyManagerModel.building_id) \
+                        .where(PropertyManagerModel.user_id == user.id)
     if city:
-        query = query.filter(BuildingModel.address_city == city)
-
-    total_buildings = query.count()
-    total_pages = math.ceil(total_buildings / limit)
+        building_query = building_query.where(BuildingModel.address_city == city)
+    
     offset = (page - 1) * limit
-    buildings = query.offset(offset).limit(limit).all()
+    building_query = building_query.offset(offset).limit(limit)
+
+    buildings = db.execute(building_query).scalars().all()
+    total_buildings = len(buildings)
+    total_pages = math.ceil(total_buildings / limit)
 
     return BuildingListResponse(
         data = [db_building_to_pydantic(b) for b in buildings],

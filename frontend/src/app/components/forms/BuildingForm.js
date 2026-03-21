@@ -25,7 +25,13 @@ export default function BuildingForm({ srcProps, isDarkMode, mapRef, modelProps 
             console.log(srcProps.modelSrc);
             console.log(srcProps.excelSrc);
             const metadata = {
-                building: buildingMetadata,
+                building: {
+                    ...buildingMetadata,
+                    location: {
+                        latitude: modelProps.coordLat,
+                        longitude: modelProps.coordLng,
+                    }
+                },
                 adjustments: {
                     scale: modelProps.scale,
                     rotation: modelProps.rotation

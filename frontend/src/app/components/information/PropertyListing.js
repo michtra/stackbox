@@ -1,18 +1,16 @@
 "use client"
 
 import clsx from "clsx";
-import { useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { Search } from "@mui/icons-material";
 import { useRouter } from "next/navigation";
 import { Pagination } from "@mui/material";
 
-import SetupUploadForm from "../forms/SetupUploadForm";
+import SetupUploadForm from "@/app/components/forms/SetupUploadForm";
 
-export default function PropertyListing({ className, propertyListingData, mapRef }) {
+export default function PropertyListing({ className, propertyListingData, mapRef, paginationProps }) {
     const router = useRouter();
-
     const [isUploadPanelOpen, setIsUploadPanelOpen] = useState(false);
-    const [page, setPage] = useState(1);
 
     return (
         <div className={clsx(className, "w-full h-full")}>
@@ -26,35 +24,37 @@ export default function PropertyListing({ className, propertyListingData, mapRef
                         </div>
                     </div>
                     <div className="w-full h-full flex flex-col px-6 py-2 gap-4 overflow-y-scroll">
-                        {propertyListingData.data.map((building) => 
-                            <div
-                                key={building.id}
-                                id={`building-listing-${building.id}`}
-                                className="flex flex-col w-full px-3 py-2 outline rounded-md cursor-pointer"
-                                onClick={(e) => {
-                                    if (e.ctrlKey || e.metaKey) {
-                                        mapRef.current.easeTo({
-                                            center: [
-                                                building.location.longitude.parsedValue,
-                                                building.location.latitude.parsedValue
-                                            ],
-                                            zoom: 16,
-                                            pitch: 60
-                                        });
-                                    }
-                                    else {
-                                        router.push(`/property/${building.id}`);
-                                    }
-                                }}
-                            >
-                                <span className="text-lg font-medium">{building.name}</span>
-                                <span className="text-sm text-black/75 dark:text-white/75">{building.address.street}</span>
-                                <span className="text-sm text-black/75 dark:text-white/75">{building.address.city}, {building.address.state}, {building.address.zip} {building.address.country}</span>
-                            </div>
-                        )}
+                        {
+                            propertyListingData.data.map((building) => 
+                                <div
+                                    key={building.id}
+                                    id={`building-listing-${building.id}`}
+                                    className="flex flex-col w-full px-3 py-2 outline rounded-md cursor-pointer"
+                                    onClick={(e) => {
+                                        if (e.ctrlKey || e.metaKey) {
+                                            mapRef.current.easeTo({
+                                                center: [
+                                                    building.location.longitude,
+                                                    building.location.latitude
+                                                ],
+                                                zoom: 16,
+                                                pitch: 60
+                                            });
+                                        }
+                                        else {
+                                            router.push(`/property/${building.id}`);
+                                        }
+                                    }}
+                                >
+                                    <span className="text-lg font-medium">{building.name}</span>
+                                    <span className="text-sm text-black/75 dark:text-white/75">{building.address.street}</span>
+                                    <span className="text-sm text-black/75 dark:text-white/75">{building.address.city}, {building.address.state}, {building.address.zip} {building.address.country}</span>
+                                </div>
+                            )
+                        }
                         <Pagination
                             count={propertyListingData.pagination.totalPages}
-                            page={page} 
+                            page={paginationProps.page} 
                             onChange={(e, val) => {
                                 // TODO: Add backend integration after adding test data into RDS
                                 setPage(val);

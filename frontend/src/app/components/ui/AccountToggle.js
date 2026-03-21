@@ -44,18 +44,19 @@ export default function AccountToggle({ className }) {
                 id="options-menu"
                 open={open}
                 onClose={handleClose}
-                onClick={handleClose}
                 transformOrigin={{ horizontal: 'right', vertical: 'top' }}
                 anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
             >
-                <MenuItem
-                    className="flex flex-row gap-2"
+                <div
+                    className="px-4 py-2"
                 >
                     <span className="text-sm">{userCred?.email}</span>
-                </MenuItem>
+                </div>
                 <MenuItem
                     onClick={() => {
-                        signOut();
+                        signOut({
+                            callbackUrl: `${process.env.NEXT_PUBLIC_COGNITO_DOMAIN}/logout?client_id=${process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID}&logout_uri=${process.env.NEXT_PUBLIC_CLIENT_URL}`
+                        });
                         handleClose();
                     }}
                     className="flex flex-row gap-2"

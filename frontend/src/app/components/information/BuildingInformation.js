@@ -46,10 +46,10 @@ function getRentalData(stackingData) {
                 }
 
                 // Calculating weighted total lease term, later divided by total occupied SF
-                weightedTotalLeaseTerm += leaseLeftMonths * occupancy.squareFeet.parsedValue;
+                weightedTotalLeaseTerm += leaseLeftMonths * occupancy.squareFeet;
 
-                totalOccupiedSF += occupancy.squareFeet.parsedValue;
-                rentalIncome += occupancy.baseRent.parsedValue;
+                totalOccupiedSF += occupancy.squareFeet;
+                rentalIncome += occupancy.baseRent;
 
                 rentRoll.push({
                     "id": `${floor.floorNumber}-${occupancy.roomNumber}-${occupancy.tenantId}`,
@@ -61,9 +61,9 @@ function getRentalData(stackingData) {
                     "leaseStart": leaseStart,
                     "leaseEnd": leaseEnd,
                     "leaseLeftMonths": leaseLeftMonths,
-                    "squareFeet": occupancy.squareFeet.parsedValue,
-                    "baseRent": occupancy.baseRent.parsedValue,
-                    "psfRent": occupancy.baseRent.parsedValue / occupancy.squareFeet.parsedValue,
+                    "squareFeet": occupancy.squareFeet,
+                    "baseRent": occupancy.baseRent,
+                    "psfRent": occupancy.baseRent / occupancy.squareFeet,
                 });
             }
         });

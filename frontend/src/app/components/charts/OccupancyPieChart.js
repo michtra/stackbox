@@ -31,11 +31,11 @@ function calculateTenantOccupancy(stackingData) {
                 if (!(tenant.tenantId in tenantOccupancy)) {
                     tenantOccupancy[tenant.tenantId] = 0;
                 }
-                tenantOccupancy[tenant.tenantId] += tenant.squareFeet.parsedValue;
-                floorOccupancy += tenant.squareFeet.parsedValue;
+                tenantOccupancy[tenant.tenantId] += tenant.squareFeet;
+                floorOccupancy += tenant.squareFeet;
             }
         });
-        totalVacancy += (floor.squareFeet.parsedValue - floorOccupancy);
+        totalVacancy += (floor.squareFeet - floorOccupancy);
     });
 
     // Get tenant data

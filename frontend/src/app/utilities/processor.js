@@ -228,17 +228,17 @@ function proportionBuilding(stackingData) {
         tenantList[floorData["floorNumber"] - 1] = {};
         floorData["occupancies"].forEach((occupancyData) => {
             tenantList[floorData["floorNumber"] - 1][`${occupancyData["tenantId"]}`] = {
-                "sf": occupancyData["squareFeet"]["parsedValue"],
+                "sf": occupancyData["squareFeet"],
                 "color": tenantObject[occupancyData["tenantId"]]["color"]
             };
         });
-        totalSFList[floorData["floorNumber"] - 1] = floorData["squareFeet"]["parsedValue"];
+        totalSFList[floorData["floorNumber"] - 1] = floorData["squareFeet"];
     });
 
     /*
     Calculating base and roof heights for each floor.
     */
-    const buildingFloorHeight = stackingData["building"]["metadata"]["heightMeters"]["parsedValue"] / stackingData["building"]["metadata"]["totalFloors"];
+    const buildingFloorHeight = stackingData["building"]["metadata"]["heightMeters"] / stackingData["building"]["metadata"]["totalFloors"];
     let currHeight = 0;
     for(let i = 0; i < buildingFloorHeightMinList.length; i++) {
         buildingFloorHeightMinList[i] = currHeight;
@@ -310,8 +310,8 @@ function propertyListingToGeoJSONFeatures(propertyListingData) {
             },
             "geometry": {
                 "coordinates": [
-                    building.location.longitude.parsedValue,
-                    building.location.latitude.parsedValue,
+                    building.location.longitude,
+                    building.location.latitude,
                 ],
                 "type": "Point"
             }

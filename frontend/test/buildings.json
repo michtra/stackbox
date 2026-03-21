@@ -12,25 +12,13 @@
                 "country": "US"
             },
             "location": {
-                "latitude": {
-                    "source": "29.761151982330066",
-                    "parsedValue": 29.761151982330066
-                },
-                "longitude": {
-                    "source": "-95.36355778818508",
-                    "parsedValue": -95.36355778818508
-                }
+                "latitude": 29.761151982330066,
+                "longitude": -95.36355778818508
             },
             "metadata": {
                 "totalFloors": 48,
-                "heightMeters": {
-                    "source": "224.0",
-                    "parsedValue": 224
-                },
-                "grossSquareFeet": {
-                    "source": "480000.0",
-                    "parsedValue": 480000
-                }
+                "heightMeters": 224,
+                "grossSquareFeet": 480000
             },
             "createdAt": "2026-02-14T19:14:27.393686",
             "updatedAt": "2026-02-14T19:14:27.393686"
@@ -46,25 +34,13 @@
                 "country": "US"
             },
             "location": {
-                "latitude": {
-                    "source": "40.755980178894156",
-                    "parsedValue": 40.755980178894156
-                },
-                "longitude": {
-                    "source": "-73.97598778479524",
-                    "parsedValue": -73.97598778479524
-                }
+                "latitude": 40.755980178894156,
+                "longitude": -73.97598778479524
             },
             "metadata": {
                 "totalFloors": 48,
-                "heightMeters": {
-                    "source": "224.0",
-                    "parsedValue": 224
-                },
-                "grossSquareFeet": {
-                    "source": "480000.0",
-                    "parsedValue": 480000
-                }
+                "heightMeters": 224,
+                "grossSquareFeet": 480000
             },
             "createdAt": "2026-02-14T19:14:27.393686",
             "updatedAt": "2026-02-14T19:14:27.393686"
@@ -80,25 +56,13 @@
                 "country": "US"
             },
             "location": {
-                "latitude": {
-                    "source": "29.760422168256376",
-                    "parsedValue": 29.760422168256376
-                },
-                "longitude": {
-                    "source": "-95.3639865090565",
-                    "parsedValue": -95.3639865090565
-                }
+                "latitude": 29.760422168256376,
+                "longitude": -95.3639865090565
             },
             "metadata": {
                 "totalFloors": 48,
-                "heightMeters": {
-                    "source": "224.0",
-                    "parsedValue": 224
-                },
-                "grossSquareFeet": {
-                    "source": "480000.0",
-                    "parsedValue": 480000
-                }
+                "heightMeters": 224,
+                "grossSquareFeet": 480000
             },
             "createdAt": "2026-02-14T19:14:27.393686",
             "updatedAt": "2026-02-14T19:14:27.393686"
@@ -114,25 +78,13 @@
                 "country": "US"
             },
             "location": {
-                "latitude": {
-                    "source": "47.60758160299899",
-                    "parsedValue": 47.60758160299899
-                },
-                "longitude": {
-                    "source": "-122.338085957778",
-                    "parsedValue": -122.338085957778
-                }
+                "latitude": 47.60758160299899,
+                "longitude": -122.338085957778
             },
             "metadata": {
                 "totalFloors": 48,
-                "heightMeters": {
-                    "source": "224.0",
-                    "parsedValue": 224
-                },
-                "grossSquareFeet": {
-                    "source": "480000.0",
-                    "parsedValue": 480000
-                }
+                "heightMeters": 224,
+                "grossSquareFeet": 480000
             },
             "createdAt": "2026-02-14T19:14:27.393686",
             "updatedAt": "2026-02-14T19:14:27.393686"
@@ -148,25 +100,13 @@
                 "country": "US"
             },
             "location": {
-                "latitude": {
-                    "source": "37.78882208598226",
-                    "parsedValue": 37.78882208598226
-                },
-                "longitude": {
-                    "source": "-122.39943677092919",
-                    "parsedValue": -122.39943677092919
-                }
+                "latitude": 37.78882208598226,
+                "longitude": -122.39943677092919
             },
             "metadata": {
                 "totalFloors": 48,
-                "heightMeters": {
-                    "source": "224.0",
-                    "parsedValue": 224
-                },
-                "grossSquareFeet": {
-                    "source": "480000.0",
-                    "parsedValue": 480000
-                }
+                "heightMeters": 224,
+                "grossSquareFeet": 480000
             },
             "createdAt": "2026-02-14T19:14:27.393686",
             "updatedAt": "2026-02-14T19:14:27.393686"
