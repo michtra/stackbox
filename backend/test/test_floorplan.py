@@ -26,6 +26,7 @@ def test_floor_generator_offset(center, scale, rotation):
     )
     generator.generateFloors()
     data = json.dumps(generator.getCoords(), indent=4)
+    Path("test/output").mkdir(exist_ok=True)
     Path(f'test/output/test_floorplan_out_offset.json').write_text(data)
     assert generator.floors == 5
     assert generator.scale == scale
@@ -38,6 +39,7 @@ def test_floor_generator_default():
     )
     generator.generateFloors()
     data = json.dumps(generator.getCoords(), indent=4)
+    Path("test/output").mkdir(exist_ok=True)
     Path(f'test/output/test_floorplan_out.json').write_text(data)
     assert generator.sections is not None
     assert len(generator.sections) > 0
