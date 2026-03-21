@@ -2,7 +2,7 @@ import io
 import json
 from typing import Union
 from uuid import uuid4, UUID
-from datetime import datetime
+from datetime import datetime, timezone
 
 import pandas as pd
 
@@ -48,7 +48,7 @@ def excel_loader(filepath: Union[str, io.BytesIO], isBuildingOnly=False) -> dict
         net_rentable_sf = float(summary.iloc[row_idx, 4])
         floor_sf_map[floor_num] = net_rentable_sf
 
-    now = datetime.utcnow().isoformat()
+    now = datetime.now(timezone.utc).isoformat()
     building_id = str(uuid4())
 
     building = {
