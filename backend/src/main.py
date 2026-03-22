@@ -3,7 +3,7 @@ from uuid import UUID, uuid4
 from fastapi import Depends, FastAPI, HTTPException, Query, Path, UploadFile, File, Form, status
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
-from sqlalchemy import func, select
+from sqlalchemy import func, select, and_, or_
 from datetime import datetime
 import math
 import json
@@ -25,6 +25,7 @@ from routers import loaders
 from utilities.floor_plan import FloorGenerator
 from auth import get_current_user, CognitoUser
 from utilities.file_loader import excel_loader
+from s3 import download_file
 import tempfile
 import os
 import io
@@ -86,7 +87,6 @@ def db_floor_to_pydantic(db_floor: FloorModel) -> Floor:
         floorNumber = cast(int, db_floor.floor_number),
         label = cast(str, db_floor.label),
         squareFeet = cast(float, db_floor.square_feet) if db_floor.square_feet is not None else None,
-        geometry = cast(UUID, db_floor.geometry_id),
         occupancies = [
             Occupancy(
                 tenantId = cast(UUID, occ.tenant_id),
@@ -327,14 +327,28 @@ async def get_stacking_plan(id: UUID, db: Session = Depends(get_db), user: Cogni
 
     tenants = db.query(TenantModel).filter(TenantModel.id.in_(tenant_ids)).all() if tenant_ids else []
 
-    geometry_ids = [f.geometry_id for f in floors if cast(bool, f.geometry_id)]
-    geometries = db.query(GeometryModel).filter(GeometryModel.id.in_(geometry_ids)).all() if geometry_ids else []
+    geometry_query = select(FileModel.file_path) \
+                        .where(
+                            and_(
+                                FileModel.building_id == "bd1971c3-2216-49ee-a235-720b4df08bf0",
+                                FileModel.file_type == "processed_json"
+                            )
+                        ) \
+                        .order_by(FileModel.created_at.desc())
+    geometry_s3_key = db.execute(geometry_query).first().file_path
+    try:
+        geometry_json = json.loads(download_file(geometry_s3_key))
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Cannot download geometry: {e}"
+        )
 
     stacking_plan = StackingPlan(
         building=db_building_to_pydantic(building),
         tenants=[db_tenant_to_pydantic(t) for t in tenants],
         floors=[db_floor_to_pydantic(f) for f in floors],
-        geometries=[Geometry(id = cast(UUID, g.id), geometry = g.geometry) for g in geometries] # type: ignore
+        geometries=geometry_json
     )
 
     return StackingPlanResponse(data=stacking_plan)

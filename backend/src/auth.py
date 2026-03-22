@@ -131,6 +131,7 @@ def get_optional_user(
         user = db.query(UserModel).filter(UserModel.sub == claims["sub"]).first()
 
     return CognitoUser(
+        id=user.id,
         sub=claims["sub"],
         email=claims.get("email"),
         name=f"{claims.get('given_name')} {claims.get('family_name')}".strip() or claims.get("name") or claims.get("cognito:username") or claims.get("username"),
