@@ -1,7 +1,45 @@
-// TODO: CHange this to use server instead of client
 "use client"
 
+import { getSession } from "next-auth/react";
 import { meterToLatLng } from "@/app/utilities/processor";
+
+/** Returns Authorization header if a session with an access token exists. */
+async function authHeaders(isId = false) {
+    const session = await getSession();
+    if (!isId && session?.accessToken) {
+        return { Authorization: `Bearer ${session.accessToken}` };
+    }
+    else if (isId && session?.idToken) {
+        return { Authorization: `Bearer ${session.idToken}` };
+    }
+    return {};
+}
+
+/** Gets user credentials from current id_token */
+async function getUserCredentials() {
+    const credentials = {
+        sub: "",
+        email: "",
+        name: "",
+    }
+    try {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_SERVER_URL}/api/me`, {
+            method: "GET",
+            headers: await authHeaders(true)
+        });
+        if (response.ok) {
+            return (await response.json()).data
+        }
+        else {
+            console.error("Network error when getting user credential:", response.statusText);
+        }
+    }
+    catch (error) {
+        console.error("Error when getting user credential:", error);
+    }
+    return credentials;
+}
+
 
 /**
  * (Deprecated) Uploads file to backend using the /uploadfile endpoint.
@@ -16,6 +54,7 @@ async function uploadFile(file, type, buildingId, floors = null) {
     formData.append('file', file);
     const response = await fetch(`${process.env.NEXT_PUBLIC_SERVER_URL}/uploadfile?type=${type}&buildingId=${buildingId}${floors !== null ? "&floors=" + floors : ""}`, {
         method: 'POST',
+        headers: await authHeaders(),
         body: formData
     });
     return response;
@@ -32,9 +71,10 @@ async function getBuildingMetadata(excelSrc) {
     formData.append("file", await urlToFile(excelSrc));
     const response = await fetch(`${process.env.NEXT_PUBLIC_SERVER_URL}/api/buildings/metadata`, {
         method: "POST",
+        headers: await authHeaders(),
         body: formData
     });
-    return response.data;
+    return (await response.json()).data;
 }
 
 async function createBuilding(modelSrc, excelSrc, metadata) {
@@ -43,6 +83,7 @@ async function createBuilding(modelSrc, excelSrc, metadata) {
         formData.append("building", metadata.building);
         const buildingCreateResponse = await fetch(`${process.env.NEXT_PUBLIC_SERVER_URL}/api/buildings`, {
             method: "POST",
+            headers: await authHeaders(),
             body: formData
         });
 
@@ -51,6 +92,7 @@ async function createBuilding(modelSrc, excelSrc, metadata) {
             return false;
         }
 
+        const buildingData = (await buildingCreateResponse.json()).data;
         scale = meterToLatLng(metadata.adjustments.scale, metadata.building.location.latitude, metadata.building.location.longitude);
 
         const stlFormData = new FormData();
@@ -61,8 +103,9 @@ async function createBuilding(modelSrc, excelSrc, metadata) {
         stlFormData.append("scaleX", scale.lng);
         stlFormData.append("scaleY", scale.lat);
         stlFormData.append("rotation", metadata.adjustments.rotation);
-        const stlUploadResponse = await fetch(`${process.env.NEXT_PUBLIC_SERVER_URL}/api/buildings/${buildingCreateResponse.data.id}/upload/stl`, {
+        const stlUploadResponse = await fetch(`${process.env.NEXT_PUBLIC_SERVER_URL}/api/buildings/${buildingData.id}/upload/stl`, {
             method: "POST",
+            headers: await authHeaders(),
             body: stlFormData
         });
 
@@ -75,6 +118,7 @@ async function createBuilding(modelSrc, excelSrc, metadata) {
         excelFormData.append("file", await urlToFile(excelSrc));
         const excelUploadResponse = await fetch(`${process.env.NEXT_PUBLIC_SERVER_URL}/api/buildings/${buildingCreateResponse.data.id}/upload/excel`, {
             method: "POST",
+            headers: await authHeaders(),
             body: excelFormData
         });
 
@@ -92,12 +136,14 @@ async function createBuilding(modelSrc, excelSrc, metadata) {
 
 async function getBuilding(id) {
     try {
-        const stackingDataResponse = await fetch(`${process.env.NEXT_PUBLIC_SERVER_URL}/api/buildings/${id}/stacking-plan`);
+        const stackingDataResponse = await fetch(`${process.env.NEXT_PUBLIC_SERVER_URL}/api/buildings/${id}/stacking-plan`, {
+            headers: await authHeaders()
+        });
         if (!stackingDataResponse.ok) {
             console.error("Network error when getting building data:", stackingDataResponse.statusText);
             return;
         }
-        return stackingDataResponse.data;
+        return (await stackingDataResponse.json()).data;
     }
     catch (error) {
         console.error("Error when creating building:", error);
@@ -106,22 +152,18 @@ async function getBuilding(id) {
 }
 
 async function getBuildingListing(page, limit) {
-    // TODO: Add user ID-based retrieval once Cognito is implemented
-    // This will be done in this order
-    // 1. Frontend function passes access token
-    // 2. Backend uses access token to get OpenID Subject ID (I think companies typically do this with Redis)
-    // 3. Backend uses OpenID Subject ID as a query
     try {
-        const buildingListingResponse = await fetch(`${process.env.NEXT_PUBLIC_SERVER_URL}/api/buildings?page=${page}&limit=${limit}`);
+        const headers = await authHeaders();
+        const buildingListingResponse = await fetch(`${process.env.NEXT_PUBLIC_SERVER_URL}/api/buildings?page=${page}&limit=${limit}`, { headers });
         if (!buildingListingResponse.ok) {
             console.error("Network error when getting building list:", buildingListingResponse.statusText);
             return;
         }
-        return buildingListingResponse;
+        return await buildingListingResponse.json();
     }
     catch (error) {
         console.error("Error when getting building list:", error);
     }
 }
 
-export { urlToFile, createBuilding, getBuilding };
+export { urlToFile, createBuilding, getBuilding, getBuildingListing, getUserCredentials };

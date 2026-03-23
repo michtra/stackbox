@@ -14,6 +14,11 @@ class Settings(BaseSettings):
     aws_secret_access_key: str | None = None
     aws_session_token: str | None = None
 
+    # Cognito Configuration
+    cognito_region: str = "us-east-1"
+    cognito_user_pool_id: str | None = None
+    cognito_client_id: str | None = None
+
     # Upload Configuration
     presigned_url_expiration: int = 300  # 5 minutes, assumes STL files are small (few MB)
 

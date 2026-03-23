@@ -3,6 +3,10 @@ import clsx from "clsx";
 import "./globals.css";
 import Script from "next/script";
 
+import AuthProvider from "@/app/components/auth/AuthProvider";
+import AuthRedirect from "@/app/components/auth/AuthRedirect";
+import AccountToggle from "@/app/components/ui/AccountToggle";
+
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -33,7 +37,12 @@ export default function RootLayout({ children }) {
       <body
         className={clsx(`${geistSans.variable} ${geistMono.variable} antialiased`, "bg-white dark:bg-slate-900 text-black dark:text-white")}
       >
-        {children}
+        <AuthProvider>
+          <AuthRedirect>
+            <AccountToggle className="absolute left-4 top-4" />
+            {children}
+          </AuthRedirect>
+        </AuthProvider>
       </body>
     </html>
   );

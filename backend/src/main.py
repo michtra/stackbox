@@ -22,6 +22,7 @@ from db_models import BuildingModel, TenantModel, FloorModel, OccupancyModel, Ge
 from config import settings
 from routers import loaders
 from utilities.floorplan import FloorGenerator
+from auth import get_current_user, CognitoUser
 import tempfile
 import os
 
@@ -30,6 +31,9 @@ app = FastAPI(title="Stackbox API")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 def db_building_to_pydantic(db_building: BuildingModel) -> Building:
@@ -90,6 +94,15 @@ def db_floor_to_pydantic(db_floor: FloorModel) -> Floor:
         ]
     )
 
+@app.get("/api/me")
+async def get_me(user: CognitoUser = Depends(get_current_user)):
+    """
+    Get current authenticated user info.
+    Use `id_token` instead of `access_token` to access user info.
+    """
+    return {"data": {"sub": user.sub, "email": user.email, "name": user.name}}
+
+
 @app.get("/")
 def read_root():
     return {"message": "Welcome to the Stackbox API"}
@@ -104,7 +117,8 @@ async def list_buildings(
     page: int = Query(1, ge=1),
     limit: int = Query(20, ge=1, le=100),
     city: Optional[str] = None,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    user: CognitoUser = Depends(get_current_user)
 ):
     """List all buildings with pagination"""
     query = db.query(BuildingModel)
@@ -127,7 +141,7 @@ async def list_buildings(
     )
 
 @app.post("/api/buildings", status_code=201, response_model=BuildingResponse)
-async def create_building(building: BuildingCreate, db: Session = Depends(get_db)):
+async def create_building(building: BuildingCreate, db: Session = Depends(get_db), user: CognitoUser = Depends(get_current_user)):
     """Create a new building"""
     existing = db.query(BuildingModel).filter(
         BuildingModel.name == building.name,
@@ -178,7 +192,7 @@ async def create_building(building: BuildingCreate, db: Session = Depends(get_db
     return BuildingResponse(data=db_building_to_pydantic(db_building))
 
 @app.get("/api/buildings/{id}", response_model=BuildingResponse)
-async def get_building(id: UUID, db: Session = Depends(get_db)):
+async def get_building(id: UUID, db: Session = Depends(get_db), user: CognitoUser = Depends(get_current_user)):
     """Get a specific building by ID"""
     building = db.query(BuildingModel).filter(BuildingModel.id == id).first()
     if not building:
@@ -189,7 +203,7 @@ async def get_building(id: UUID, db: Session = Depends(get_db)):
     return BuildingResponse(data=db_building_to_pydantic(building))
 
 @app.put("/api/buildings/{id}", response_model=BuildingResponse)
-async def update_building(id: UUID, building: BuildingUpdate, db: Session = Depends(get_db)):
+async def update_building(id: UUID, building: BuildingUpdate, db: Session = Depends(get_db), user: CognitoUser = Depends(get_current_user)):
     """Update a building"""
     db_building = db.query(BuildingModel).filter(BuildingModel.id == id).first()
     if not db_building:
@@ -228,7 +242,7 @@ async def update_building(id: UUID, building: BuildingUpdate, db: Session = Depe
     return BuildingResponse(data=db_building_to_pydantic(db_building))
 
 @app.delete("/api/buildings/{id}", status_code=204)
-async def delete_building(id: UUID, db: Session = Depends(get_db)):
+async def delete_building(id: UUID, db: Session = Depends(get_db), user: CognitoUser = Depends(get_current_user)):
     """Delete a building"""
     db_building = db.query(BuildingModel).filter(BuildingModel.id == id).first()
 
@@ -249,7 +263,7 @@ async def delete_building(id: UUID, db: Session = Depends(get_db)):
     return None
 
 @app.get("/api/buildings/{id}/stacking-plan", response_model=StackingPlanResponse)
-async def get_stacking_plan(id: UUID, db: Session = Depends(get_db)):
+async def get_stacking_plan(id: UUID, db: Session = Depends(get_db), user: CognitoUser = Depends(get_current_user)):
     """Get the complete stacking plan for a building"""
     building = db.query(BuildingModel).filter(BuildingModel.id == id).first()
 
@@ -282,7 +296,7 @@ async def get_stacking_plan(id: UUID, db: Session = Depends(get_db)):
 
 # Tenants
 @app.get("/api/tenants", response_model = TenantListResponse)
-async def list_tenants(search: Optional[str] = None, db: Session = Depends(get_db)):
+async def list_tenants(search: Optional[str] = None, db: Session = Depends(get_db), user: CognitoUser = Depends(get_current_user)):
     """List all tenants with optional name search"""
     query = db.query(TenantModel)
     if search:
@@ -291,7 +305,7 @@ async def list_tenants(search: Optional[str] = None, db: Session = Depends(get_d
     return TenantListResponse(data = [db_tenant_to_pydantic(t) for t in tenants])
 
 @app.post("/api/tenants", status_code=201, response_model = TenantResponse)
-async def create_tenant(tenant: TenantCreate, db: Session = Depends(get_db)):
+async def create_tenant(tenant: TenantCreate, db: Session = Depends(get_db), user: CognitoUser = Depends(get_current_user)):
     """Create a new tenant"""
     db_tenant = TenantModel(
         name = tenant.name,
@@ -312,7 +326,7 @@ async def create_tenant(tenant: TenantCreate, db: Session = Depends(get_db)):
     return TenantResponse(data=db_tenant_to_pydantic(db_tenant))
 
 @app.get("/api/tenants/{id}", response_model=TenantResponse)
-async def get_tenant(id: UUID, db: Session = Depends(get_db)):
+async def get_tenant(id: UUID, db: Session = Depends(get_db), user: CognitoUser = Depends(get_current_user)):
     """Get a specific tenant by ID"""
     db_tenant = db.query(TenantModel).filter(TenantModel.id == id).first()
     if not db_tenant:
@@ -323,7 +337,7 @@ async def get_tenant(id: UUID, db: Session = Depends(get_db)):
     return TenantResponse(data = db_tenant_to_pydantic(db_tenant))
 
 @app.put("/api/tenants/{id}", response_model=TenantResponse)
-async def update_tenant(id: UUID, tenant: TenantUpdate, db: Session = Depends(get_db)):
+async def update_tenant(id: UUID, tenant: TenantUpdate, db: Session = Depends(get_db), user: CognitoUser = Depends(get_current_user)):
     """Update a tenant (partial updates allowed)"""
     db_tenant = db.query(TenantModel).filter(TenantModel.id == id).first()
     if not db_tenant:
@@ -354,7 +368,7 @@ async def update_tenant(id: UUID, tenant: TenantUpdate, db: Session = Depends(ge
     return TenantResponse(data=db_tenant_to_pydantic(db_tenant))
 
 @app.delete("/api/tenants/{id}", status_code=204)
-async def delete_tenant(id: UUID, db: Session = Depends(get_db)):
+async def delete_tenant(id: UUID, db: Session = Depends(get_db), user: CognitoUser = Depends(get_current_user)):
     """Delete a tenant"""
     db_tenant = db.query(TenantModel).filter(TenantModel.id == id).first()
     if not db_tenant:
@@ -374,7 +388,7 @@ async def delete_tenant(id: UUID, db: Session = Depends(get_db)):
     return None
 
 @app.get("/api/tenants/{id}/occupancies", response_model=TenantOccupanciesResponse)
-async def get_tenant_occupancies(id: UUID, db: Session = Depends(get_db)):
+async def get_tenant_occupancies(id: UUID, db: Session = Depends(get_db), user: CognitoUser = Depends(get_current_user)):
     """Get all occupancies for a tenant across buildings"""
     db_tenant = db.query(TenantModel).filter(TenantModel.id == id).first()
     if not db_tenant:
@@ -403,7 +417,7 @@ async def get_tenant_occupancies(id: UUID, db: Session = Depends(get_db)):
 
 # Floorplans
 @app.get("/api/buildings/{id}/floors", response_model=FloorListResponse)
-async def list_floors(id: UUID, db: Session = Depends(get_db)):
+async def list_floors(id: UUID, db: Session = Depends(get_db), user: CognitoUser = Depends(get_current_user)):
     """List all floors for a building"""
     db_building = db.query(BuildingModel).filter(BuildingModel.id == id).first()
 
@@ -420,7 +434,7 @@ async def list_floors(id: UUID, db: Session = Depends(get_db)):
     return FloorListResponse(data = [db_floor_to_pydantic(f) for f in db_floors])
 
 @app.put("/api/buildings/{id}/floors/{floorNumber}", response_model=FloorResponse)
-async def update_floor(id: UUID, floorNumber: int, floor_data: FloorUpdate, db: Session = Depends(get_db)):
+async def update_floor(id: UUID, floorNumber: int, floor_data: FloorUpdate, db: Session = Depends(get_db), user: CognitoUser = Depends(get_current_user)):
     """Update floor information (partial update)"""
     db_floor = db.query(FloorModel).filter(
         FloorModel.building_id == id,
@@ -451,7 +465,7 @@ async def update_floor(id: UUID, floorNumber: int, floor_data: FloorUpdate, db: 
     return FloorResponse(data = db_floor_to_pydantic(db_floor))
 
 @app.post("/api/buildings/{id}/floors/{floorNumber}/occupancies", status_code=201, response_model=FloorResponse)
-async def add_occupancy(id: UUID, floorNumber: int, occupancy: OccupancyCreate, db: Session = Depends(get_db)):
+async def add_occupancy(id: UUID, floorNumber: int, occupancy: OccupancyCreate, db: Session = Depends(get_db), user: CognitoUser = Depends(get_current_user)):
     """Add a tenant to a floor"""
     db_floor = db.query(FloorModel).filter(
         FloorModel.building_id == id,
@@ -511,7 +525,7 @@ async def add_occupancy(id: UUID, floorNumber: int, occupancy: OccupancyCreate, 
     return FloorResponse(data = db_floor_to_pydantic(db_floor))
 
 @app.put("/api/buildings/{id}/floors/{floorNumber}/occupancies/{tenantId}", response_model=FloorResponse)
-async def update_occupancy(id: UUID, floorNumber: int, tenantId: UUID, occupancy_data: OccupancyUpdate, db: Session = Depends(get_db)):
+async def update_occupancy(id: UUID, floorNumber: int, tenantId: UUID, occupancy_data: OccupancyUpdate, db: Session = Depends(get_db), user: CognitoUser = Depends(get_current_user)):
     """Update tenant occupancy information"""
     db_floor = db.query(FloorModel).filter(
         FloorModel.building_id == id,
@@ -564,7 +578,7 @@ async def update_occupancy(id: UUID, floorNumber: int, tenantId: UUID, occupancy
     return FloorResponse(data=db_floor_to_pydantic(db_floor))
 
 @app.delete("/api/buildings/{id}/floors/{floorNumber}/occupancies/{tenantId}", status_code=204)
-async def remove_occupancy(id: UUID, floorNumber: int, tenantId: UUID, db: Session = Depends(get_db)):
+async def remove_occupancy(id: UUID, floorNumber: int, tenantId: UUID, db: Session = Depends(get_db), user: CognitoUser = Depends(get_current_user)):
     """Remove a tenant from a floor"""
     db_floor = db.query(FloorModel).filter(
         FloorModel.building_id == id,
@@ -611,7 +625,8 @@ async def upload_stl(
     scaleX: float = Form(1.0),
     scaleY: float = Form(1.0),
     rotation: float = Form(0.0),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    user: CognitoUser = Depends(get_current_user)
 ):
     """Upload 3D building model for floor geometry extraction"""
     db_building = db.query(BuildingModel).filter(BuildingModel.id == id).first()
@@ -674,7 +689,7 @@ async def upload_stl(
     })
 
 @app.post("/api/buildings/{id}/upload/excel", response_model=UploadJobResponse)
-async def upload_excel(id: UUID, file: UploadFile = File(...), db: Session = Depends(get_db)):
+async def upload_excel(id: UUID, file: UploadFile = File(...), db: Session = Depends(get_db), user: CognitoUser = Depends(get_current_user)):
     """Upload Excel file with stacking plan data"""
     db_building = db.query(BuildingModel).filter(BuildingModel.id == id).first()
 
