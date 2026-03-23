@@ -4,7 +4,7 @@ from sqlalchemy.orm import relationship, Mapped, mapped_column
 from typing import Optional
 from database import Base
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 
 class UserModel(Base):
     __tablename__ = "users"
@@ -42,8 +42,8 @@ class BuildingModel(Base):
     floor_height_meters: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     gross_square_feet: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     year_built: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
-    updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.now(timezone.utc))
+    updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))
 
     floors = relationship("FloorModel", back_populates="building", cascade="all, delete-orphan")
     property_managers = relationship("PropertyManagerModel", back_populates="building", cascade="all, delete-orphan")
@@ -56,9 +56,8 @@ class TenantModel(Base):
     contact_email: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     contact_phone: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     color: Mapped[Optional[str]] = mapped_column(String(7), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
-    updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
-    color: Mapped[str] = mapped_column(String, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.now(timezone.utc))
+    updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))
 
     occupancies = relationship("OccupancyModel", back_populates="tenant", cascade="all, delete-orphan")
 
@@ -80,7 +79,9 @@ class OccupancyModel(Base):
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     floor_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("floors.id"), nullable=False)
     tenant_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("tenants.id"), nullable=False)
+    room_num: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     square_feet: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    lease_type: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     lease_start: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     lease_end: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
 
@@ -97,7 +98,7 @@ class FileModel(Base):
     original_filename: Mapped[str] = mapped_column(String, nullable=False)
     file_size: Mapped[int] = mapped_column(Integer, nullable=False)
     status: Mapped[str] = mapped_column(String, nullable=False, default="uploaded")  # 'uploaded', 'processing', 'completed', 'failed'
-    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.now(timezone.utc))
     processed_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
 
     building = relationship("BuildingModel")
@@ -111,7 +112,7 @@ class JobModel(Base):
     status: Mapped[str] = mapped_column(String, nullable=False, default="pending")
     message: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     result: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
-    updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.now(timezone.utc))
+    updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))
 
     building = relationship("BuildingModel")

@@ -25,41 +25,47 @@ export default function PropertyListing({ className, propertyListingData, mapRef
                     </div>
                     <div className="w-full h-full flex flex-col px-6 py-2 gap-4 overflow-y-scroll">
                         {
-                            propertyListingData.data.map((building) => 
-                                <div
-                                    key={building.id}
-                                    id={`building-listing-${building.id}`}
-                                    className="flex flex-col w-full px-3 py-2 outline rounded-md cursor-pointer"
-                                    onClick={(e) => {
-                                        if (e.ctrlKey || e.metaKey) {
-                                            mapRef.current.easeTo({
-                                                center: [
-                                                    building.location.longitude,
-                                                    building.location.latitude
-                                                ],
-                                                zoom: 16,
-                                                pitch: 60
-                                            });
-                                        }
-                                        else {
-                                            router.push(`/property/${building.id}`);
-                                        }
+                            propertyListingData.data.length != 0 ?
+                            [
+                                ...propertyListingData.data.map((building) => 
+                                    <div
+                                        key={building.id}
+                                        id={`building-listing-${building.id}`}
+                                        className="flex flex-col w-full px-3 py-2 outline rounded-md cursor-pointer"
+                                        onClick={(e) => {
+                                            if (e.ctrlKey || e.metaKey) {
+                                                mapRef.current.easeTo({
+                                                    center: [
+                                                        building.location.longitude,
+                                                        building.location.latitude
+                                                    ],
+                                                    zoom: 16,
+                                                    pitch: 60
+                                                });
+                                            }
+                                            else {
+                                                router.push(`/property/${building.id}`);
+                                            }
+                                        }}
+                                    >
+                                        <span className="text-lg font-medium">{building.name}</span>
+                                        <span className="text-sm text-black/75 dark:text-white/75">{building.address.street}</span>
+                                        <span className="text-sm text-black/75 dark:text-white/75">{building.address.city}, {building.address.state}, {building.address.zip} {building.address.country}</span>
+                                    </div>
+                                ),
+                                <Pagination
+                                    count={propertyListingData.pagination.totalPages}
+                                    page={paginationProps.page} 
+                                    onChange={(e, val) => {
+                                        // TODO: Add backend integration after adding test data into RDS
+                                        setPage(val);
                                     }}
-                                >
-                                    <span className="text-lg font-medium">{building.name}</span>
-                                    <span className="text-sm text-black/75 dark:text-white/75">{building.address.street}</span>
-                                    <span className="text-sm text-black/75 dark:text-white/75">{building.address.city}, {building.address.state}, {building.address.zip} {building.address.country}</span>
-                                </div>
-                            )
+                                />
+                            ] :
+                            <div className="w-full h-full flex justify-center items-center">
+                                <span>No properties</span>
+                            </div>
                         }
-                        <Pagination
-                            count={propertyListingData.pagination.totalPages}
-                            page={paginationProps.page} 
-                            onChange={(e, val) => {
-                                // TODO: Add backend integration after adding test data into RDS
-                                setPage(val);
-                            }}
-                        />
                     </div>
                 </div>
                 <div className="flex flex-row gap-2 pb-6 px-6">
