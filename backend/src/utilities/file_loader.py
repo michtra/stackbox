@@ -232,6 +232,7 @@ def excel_load_to_db(filepath: Union[str, io.BytesIO], building_id: UUID) -> dic
         room_num = str(row.iloc[1]).strip()
         tenant_name = str(row.iloc[2]).strip()
         sf = float(row.iloc[3]) if pd.notna(row.iloc[3]) else None
+        base_rent = float(row.iloc[4]) if pd.notna(row.iloc[4]) else None
         lease_type = str(row.iloc[5]).strip()
         lease_start = row.iloc[6]
         lease_end = row.iloc[7]
@@ -240,21 +241,22 @@ def excel_load_to_db(filepath: Union[str, io.BytesIO], building_id: UUID) -> dic
         tenant_set.add(tenant_name)
 
         # Normalize dates
-        lease_start = None
-        lease_end = None
+        lease_start_dt = None
+        lease_end_dt = None
         if pd.notna(lease_start):
-            lease_start = pd.Timestamp(lease_start).to_pydatetime()
+            lease_start_dt = pd.Timestamp(lease_start).to_pydatetime()
         if pd.notna(lease_end):
-            lease_end = pd.Timestamp(lease_end).to_pydatetime()
+            lease_end_dt = pd.Timestamp(lease_end).to_pydatetime()
         
         db_occupancy_rows.append((
             OccupancyModel(
                 floor_id=db_floor_map[floor_num].id,
                 room_num=room_num,
                 square_feet=sf,
+                base_rent=base_rent,
                 lease_type=lease_type,
-                lease_start=lease_start,
-                lease_end=lease_end,
+                lease_start=lease_start_dt,
+                lease_end=lease_end_dt,
             ),
             tenant_name
         ))

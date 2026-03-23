@@ -1,7 +1,9 @@
 import pytest
 from sqlalchemy import text, select, inspect, and_, or_
+from collections import Counter
 
 from db_models import *
+from test_values import TEST_USER_ID, TEST_BUILDING_ID
 
 # try if our get_db function works
 try:
@@ -28,29 +30,31 @@ def test_db_connection():
         except StopIteration:
             pass
 
-
 @skip_no_db
-@pytest.mark.parametrize("model, query_text, query_stmt, isAll", [
+@pytest.mark.parametrize("label, model, query_text, query_stmt, isAll", [
     (
+        f"Get property listing for user ID {str(TEST_USER_ID)}",
         BuildingModel,
-        """
+        f"""
         SELECT buildings.*
         FROM buildings
-        INNER JOIN property_managers ON buildings.id = property_managers.building_id
-        WHERE property_managers.user_id = '2de1ab28-d689-4009-a5b9-4ff74b5d834c'
+        INNER JOIN property_managers
+            ON buildings.id = property_managers.building_id
+            WHERE property_managers.user_id = '{str(TEST_USER_ID)}'
         """,
         select(BuildingModel) \
         .join(PropertyManagerModel, BuildingModel.id == PropertyManagerModel.building_id) \
-        .where(PropertyManagerModel.user_id == "2de1ab28-d689-4009-a5b9-4ff74b5d834c"),
+        .where(PropertyManagerModel.user_id == str(TEST_USER_ID)),
         True
     ),
     (
+        f"Get processed json for building ID {str(TEST_BUILDING_ID)}",
         FileModel,
-        """
+        f"""
         SELECT *
         FROM files
         WHERE
-            building_id='bd1971c3-2216-49ee-a235-720b4df08bf0'
+            building_id='{str(TEST_BUILDING_ID)}'
             AND file_type='processed_json'
         ORDER BY created_at DESC
         LIMIT 1
@@ -58,19 +62,77 @@ def test_db_connection():
         select(FileModel) \
         .where(
             and_(
-                FileModel.building_id == "bd1971c3-2216-49ee-a235-720b4df08bf0",
+                FileModel.building_id == str(TEST_BUILDING_ID),
                 FileModel.file_type == "processed_json"
             )
         ) \
         .order_by(FileModel.created_at.desc()),
         False
+    ),
+    (
+        f"Get metadata for building ID {str(TEST_BUILDING_ID)}",
+        BuildingModel,
+        f"""
+        SELECT *
+        FROM buildings
+        WHERE id='{str(TEST_BUILDING_ID)}'
+        ORDER BY updated_at DESC
+        LIMIT 1
+        """,
+        select(BuildingModel) \
+        .where(BuildingModel.id == str(TEST_BUILDING_ID)) \
+        .order_by(BuildingModel.updated_at.desc()),
+        False
+    ),
+    (
+        f"Get floors for building ID {str(TEST_BUILDING_ID)}",
+        FloorModel,
+        f"""
+        SELECT *
+        FROM floors
+        WHERE building_id='{str(TEST_BUILDING_ID)}'
+        ORDER BY floor_number ASC
+        """,
+        select(FloorModel) \
+        .where(FloorModel.building_id == str(TEST_BUILDING_ID)) \
+        .order_by(FloorModel.floor_number.asc()),
+        True
+    ),
+    (
+        f"Get tenants for building ID {str(TEST_BUILDING_ID)}",
+        TenantModel,
+        f"""
+        SELECT DISTINCT tenants.*
+        FROM tenants
+        INNER JOIN occupancies
+            ON tenants.id = occupancies.tenant_id;
+        """,
+        select(TenantModel).distinct() \
+        .join(OccupancyModel, OccupancyModel.tenant_id == TenantModel.id),
+        True
+    ),
+    (
+        f"Get occupancies for building ID {str(TEST_BUILDING_ID)}",
+        OccupancyModel,
+        f"""
+        SELECT occupancies.*
+        FROM occupancies
+        INNER JOIN floors
+            ON floors.id = occupancies.floor_id
+            WHERE floors.building_id='{str(TEST_BUILDING_ID)}'
+        """,
+        select(OccupancyModel) \
+        .join(FloorModel, FloorModel.id == OccupancyModel.floor_id) \
+        .where(FloorModel.building_id == str(TEST_BUILDING_ID)),
+        True
     )
 ])
-def test_db_query(model, query_text, query_stmt, isAll):
+def test_db_query(label, model, query_text, query_stmt, isAll):
     try:
         cols = list(model.__table__.columns.keys())
+        print(f"Test: {label}.")
         print(f"Columns:\n{cols}\n")
-        if all:
+        if isAll:
             res_text_rows = db.execute(text(query_text)).all()
             res_stmt_rows = db.execute(query_stmt).scalars().all()
             res_stmt_rows = [tuple(getattr(row, col) for col in cols) for row in res_stmt_rows]
@@ -78,10 +140,14 @@ def test_db_query(model, query_text, query_stmt, isAll):
             res_text_rows = db.execute(text(query_text)).first()
             res_stmt_rows = db.execute(query_stmt).scalars().first()
             res_stmt_rows = [getattr(res_stmt_rows, col) for col in cols]
-        print(f"PostgreSQL query:\n{res_text_rows}\n")
-        print(f"SQLAlchemy query:\n{res_stmt_rows}\n")
-        assert set(res_text_rows) == set(res_stmt_rows)
-        print("✓ SQLAlchemy query matches PostgreSQL query.\n")
+        print(f"PostgreSQL query:")
+        for row in res_text_rows:
+            print(f"{row}")
+        print(f"\nSQLAlchemy query:")
+        for row in res_stmt_rows:
+            print(f"{row}")
+        assert Counter(res_text_rows) == Counter(res_stmt_rows)
+        print("\n✓ SQLAlchemy query matches PostgreSQL query.\n")
     except Exception as e:
         print(f"Database error: {e}\n")
         raise

@@ -111,7 +111,7 @@ async function getBuildingMetadata(excelSrc) {
  * @param {Object} metadata.adjustments 3D model adjustments data.
  * @param {float} metadata.adjustments.scale 3D model scale (map scale to model scale).
  * @param {float} metadata.adjustments.rotation 3D model rotation (degrees).
- * @returns 
+ * @returns Undefined if error, building ID if successful
  */
 async function createBuilding(modelSrc, excelSrc, metadata) {
     try {
@@ -125,7 +125,7 @@ async function createBuilding(modelSrc, excelSrc, metadata) {
 
         if (!buildingCreateResponse.ok) {
             console.error("Network error when creating building:", buildingCreateResponse.statusText);
-            return false;
+            return;
         }
 
         const buildingData = (await buildingCreateResponse.json()).data;
@@ -148,7 +148,7 @@ async function createBuilding(modelSrc, excelSrc, metadata) {
 
         if (!stlUploadResponse.ok) {
             console.error("Network error when uploading STL file:", stlUploadResponse.statusText);
-            return false;
+            return;
         }
 
         const excelFormData = new FormData();
@@ -161,14 +161,15 @@ async function createBuilding(modelSrc, excelSrc, metadata) {
 
         if (!excelUploadResponse.ok) {
             console.error("Network error when uploading Excel file:", excelUploadResponse.statusText);
-            return false;
+            return;
         }
+
+        return buildingData.id;
     }
     catch (error) {
         console.error("Error when creating building:", error);
-        return false;
+        return;
     }
-    return true;
 }
 
 /**

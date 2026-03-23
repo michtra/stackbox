@@ -122,7 +122,9 @@ class Geometry(BaseModel):
 class Occupancy(BaseModel):
     """Tenant occupancy on a floor"""
     tenantId: UUID
+    roomNumber: Optional[str] = None
     squareFeet: Optional[float] = None
+    baseRent: Optional[float] = None
     leaseStart: Optional[datetime] = None
     leaseEnd: Optional[datetime] = None
 

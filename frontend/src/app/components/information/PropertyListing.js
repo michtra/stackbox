@@ -54,6 +54,7 @@ export default function PropertyListing({ className, propertyListingData, mapRef
                                     </div>
                                 ),
                                 <Pagination
+                                    key="page-selector"
                                     count={propertyListingData.pagination.totalPages}
                                     page={paginationProps.page} 
                                     onChange={(e, val) => {

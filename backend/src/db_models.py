@@ -13,7 +13,7 @@ class UserModel(Base):
     sub: Mapped[str] = mapped_column(String, nullable=False) # Basic stuff like name and email can be handled by Cognito service.
     # TODO: Maybe add a corporate group field.
     
-    property_managers = relationship("PropertyManagerModel", back_populates="user", cascade="all, delete-orphan")
+    property_managers: Mapped[list[PropertyManagerModel]] = relationship("PropertyManagerModel", back_populates="user", cascade="all, delete-orphan")
 
 class PropertyManagerModel(Base):
     __tablename__ = "property_managers"
@@ -22,8 +22,8 @@ class PropertyManagerModel(Base):
     user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
     building_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("buildings.id"), nullable=False)
     
-    user = relationship("UserModel", back_populates="property_managers")
-    building = relationship("BuildingModel", back_populates="property_managers")
+    user: Mapped[UserModel] = relationship("UserModel", back_populates="property_managers")
+    building: Mapped[BuildingModel] = relationship("BuildingModel", back_populates="property_managers")
 
 class BuildingModel(Base):
     __tablename__ = "buildings"
@@ -45,8 +45,8 @@ class BuildingModel(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.now(timezone.utc))
     updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))
 
-    floors = relationship("FloorModel", back_populates="building", cascade="all, delete-orphan")
-    property_managers = relationship("PropertyManagerModel", back_populates="building", cascade="all, delete-orphan")
+    floors: Mapped[list[FloorModel]] = relationship("FloorModel", back_populates="building", cascade="all, delete-orphan")
+    property_managers: Mapped[list[PropertyManagerModel]] = relationship("PropertyManagerModel", back_populates="building", cascade="all, delete-orphan")
 
 class TenantModel(Base):
     __tablename__ = "tenants"
@@ -59,7 +59,7 @@ class TenantModel(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.now(timezone.utc))
     updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))
 
-    occupancies = relationship("OccupancyModel", back_populates="tenant", cascade="all, delete-orphan")
+    occupancies: Mapped[list[OccupancyModel]] = relationship("OccupancyModel", back_populates="tenant", cascade="all, delete-orphan")
 
 class FloorModel(Base):
     __tablename__ = "floors"
@@ -70,8 +70,8 @@ class FloorModel(Base):
     label: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     square_feet: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
 
-    building = relationship("BuildingModel", back_populates="floors")
-    occupancies = relationship("OccupancyModel", back_populates="floor", cascade="all, delete-orphan")
+    building: Mapped[BuildingModel] = relationship("BuildingModel", back_populates="floors")
+    occupancies: Mapped[list[OccupancyModel]] = relationship("OccupancyModel", back_populates="floor", cascade="all, delete-orphan")
 
 class OccupancyModel(Base):
     __tablename__ = "occupancies"
@@ -81,12 +81,13 @@ class OccupancyModel(Base):
     tenant_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("tenants.id"), nullable=False)
     room_num: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     square_feet: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    base_rent: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     lease_type: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     lease_start: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     lease_end: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
 
-    floor = relationship("FloorModel", back_populates="occupancies")
-    tenant = relationship("TenantModel", back_populates="occupancies")
+    floor: Mapped[FloorModel] = relationship("FloorModel", back_populates="occupancies")
+    tenant: Mapped[TenantModel] = relationship("TenantModel", back_populates="occupancies")
 
 class FileModel(Base):
     __tablename__ = "files"
@@ -101,7 +102,7 @@ class FileModel(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.now(timezone.utc))
     processed_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
 
-    building = relationship("BuildingModel")
+    building: Mapped[BuildingModel] = relationship("BuildingModel")
 
 
 class JobModel(Base):
@@ -115,4 +116,4 @@ class JobModel(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.now(timezone.utc))
     updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))
 
-    building = relationship("BuildingModel")
+    building: Mapped[BuildingModel] = relationship("BuildingModel")

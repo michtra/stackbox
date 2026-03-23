@@ -41,7 +41,7 @@ export default function Page() {
                     <ListingVisualization propertyListingData={propertyListingData} isDarkMode={isDarkMode} mapRef={mapRef} />
                     <PropertyListing propertyListingData={propertyListingData} mapRef={mapRef} paginationProps={paginationProps} />
                 </ResizableWindows> :
-                <div className="w-full h-full flex flex-col justify-center items-center">
+                <div className="w-full h-screen flex flex-col justify-center items-center">
                     <CircularProgress size="3rem" />
                 </div>
             }

@@ -79,7 +79,7 @@ function proportionWall(floorPlanShapes, tenantList, totalSF, floorNum, building
     // Tenant position array, stores [shape index, edge index, proportion within edge after edge index].
     const tenantPositions = Array(Object.keys(tenantList).length).fill(["", 0, 0, 0]);
     tenantWallLengths.forEach(([tenant, wallPosition], tenantIndex) => {
-        while(wallPosition > edgeLengths[currShapeIndex].at(-1)) {
+        while(currShapeIndex < edgeLengths.length - 1 && wallPosition > edgeLengths[currShapeIndex].at(-1)) {
             currShapeIndex++;
         }
         let [low, high, mid] = [0, edgeLengths[currShapeIndex].length - 1, 0];

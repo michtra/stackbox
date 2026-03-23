@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import clsx from "clsx";
 import { Slider } from "@mui/material";
 import { Upload } from "@mui/icons-material";
@@ -13,6 +14,7 @@ import { loadAdjustmentsBuildingMesh } from "@/app/utilities/processor";
 
 export default function BuildingForm({ srcProps, isDarkMode, mapRef, modelProps }) {
     // TODO: Google Maps Platform Place Autocomplete integration.
+    const router = useRouter();
 
     const [modelFileName, setModelFileName] = useState();
     const [excelFileName, setExcelFileName] = useState();
@@ -33,13 +35,17 @@ export default function BuildingForm({ srcProps, isDarkMode, mapRef, modelProps 
                     }
                 },
                 adjustments: {
-                    scale: modelProps.scale,
+                    scale: 10 ** modelProps.scale,
                     rotation: modelProps.rotation
                 }
             };
             console.log(metadata)
             // TODO: Cache building metadata somewhere.
-            createBuilding(srcProps.modelSrc, srcProps.excelSrc, metadata);
+            createBuilding(srcProps.modelSrc, srcProps.excelSrc, metadata).then((buildingId) => {
+                if (buildingId) {
+                    router.push(`/property/${buildingId}`);
+                }
+            });
         }
     }
 

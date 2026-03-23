@@ -6,13 +6,12 @@ from pathlib import Path
 from uuid import UUID
 
 from utilities.file_loader import excel_load_to_db
+from test_values import TEST_BUILDING_ID
 
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent / 'src'))
 
 from utilities.file_loader import excel_loader
-
-TEST_BUILDING_ID = UUID("8ba3b1d8-7ced-4777-9651-4ebe5cbe55c3")
 
 def test_excel_json():
     result = excel_loader('test/input/Rent Roll Example.xlsx')

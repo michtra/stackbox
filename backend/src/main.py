@@ -24,7 +24,7 @@ from config import settings
 from routers import loaders
 from utilities.floor_plan import FloorGenerator
 from auth import get_current_user, CognitoUser
-from utilities.file_loader import excel_loader
+from utilities.file_loader import excel_loader, excel_load_to_db
 from s3 import download_file
 import tempfile
 import os
@@ -90,7 +90,9 @@ def db_floor_to_pydantic(db_floor: FloorModel) -> Floor:
         occupancies = [
             Occupancy(
                 tenantId = cast(UUID, occ.tenant_id),
+                roomNumber = occ.room_num,
                 squareFeet = occ.square_feet,
+                baseRent = occ.base_rent,
                 leaseStart = cast(datetime, occ.lease_start) if occ.lease_start else None,
                 leaseEnd = cast(datetime, occ.lease_end) if occ.lease_end else None
             ) for occ in db_floor.occupancies
@@ -181,15 +183,6 @@ async def create_building(building: Annotated[str, Form()], db: Session = Depend
     
     try:
         db.add(db_building)
-        db.commit()
-        db.refresh(db_building)
-
-        for floor_num in range(building.metadata.totalFloors):
-            db_floor = FloorModel(
-                building_id=db_building.id,
-                floor_number=floor_num
-            )
-            db.add(db_floor)
         db.commit()
         db.refresh(db_building)
     except Exception as e:
@@ -310,7 +303,10 @@ async def delete_building(id: UUID, db: Session = Depends(get_db), user: Cognito
 @app.get("/api/buildings/{id}/stacking-plan", response_model=StackingPlanResponse)
 async def get_stacking_plan(id: UUID, db: Session = Depends(get_db), user: CognitoUser = Depends(get_current_user)):
     """Get the complete stacking plan for a building"""
-    building = db.query(BuildingModel).filter(BuildingModel.id == id).first()
+    building_query = select(BuildingModel) \
+                        .where(BuildingModel.id == id) \
+                        .order_by(BuildingModel.updated_at.desc())
+    building: BuildingModel = db.execute(building_query).scalars().first()
 
     if not building:
         raise HTTPException(
@@ -318,24 +314,35 @@ async def get_stacking_plan(id: UUID, db: Session = Depends(get_db), user: Cogni
             detail="Building not found"
         )
 
-    floors = db.query(FloorModel).filter(FloorModel.building_id == id).order_by(FloorModel.floor_number).all()
+    floors_query = select(FloorModel) \
+                    .where(FloorModel.building_id == id) \
+                    .order_by(FloorModel.floor_number.asc())
+    floors: list[FloorModel] = db.execute(floors_query).scalars().all()
 
-    tenant_ids = set()
-    for floor in floors:
-        for occ in floor.occupancies:
-            tenant_ids.add(occ.tenant_id)
+    tenants_query = select(TenantModel).distinct() \
+                    .join(OccupancyModel, OccupancyModel.tenant_id == TenantModel.id)
+    tenants: list[TenantModel] = db.execute(tenants_query).scalars().all()
+    tenants_map: dict[UUID, TenantModel] = {}
+    for tenant in tenants:
+        tenants_map[tenant.id] = tenant
 
-    tenants = db.query(TenantModel).filter(TenantModel.id.in_(tenant_ids)).all() if tenant_ids else []
+    occupancies_query = select(OccupancyModel) \
+                        .join(FloorModel, FloorModel.id == OccupancyModel.floor_id) \
+                        .where(FloorModel.building_id == id)
+    occupancies: list[OccupancyModel] = db.execute(occupancies_query).scalars().all()
+    for occupancy in occupancies:
+        tenants_map[occupancy.tenant_id].occupancies.append(occupancy)
 
     geometry_query = select(FileModel.file_path) \
                         .where(
                             and_(
-                                FileModel.building_id == "bd1971c3-2216-49ee-a235-720b4df08bf0",
+                                FileModel.building_id == id,
                                 FileModel.file_type == "processed_json"
                             )
                         ) \
                         .order_by(FileModel.created_at.desc())
     geometry_s3_key = db.execute(geometry_query).first().file_path
+
     try:
         geometry_json = json.loads(download_file(geometry_s3_key))
     except Exception as e:
@@ -688,6 +695,8 @@ async def upload_stl(
     user: CognitoUser = Depends(get_current_user)
 ):
     """Upload 3D building model for floor geometry extraction"""
+    # TODO: Implement job queue (currently looking into Redis Queue). Will use backend to process in the meantime.
+
     db_building = db.query(BuildingModel).filter(BuildingModel.id == id).first()
 
     if not db_building:
@@ -731,6 +740,7 @@ async def upload_stl(
             center = (centerX, centerY) if centerX is not None and centerY is not None else None
             scale = (scaleX, scaleY, scaleZ) if scaleX is not None and scaleY is not None and scaleZ is not None else None
 
+            # --- This will be moved to queue if we implement it ---
             generator = FloorGenerator(
                 model=tmp_path,
                 floors=db_building.total_floors,
@@ -751,7 +761,13 @@ async def upload_stl(
                 created_at=datetime.fromtimestamp(model_file_metadata["timestamp"] / 1e9),
                 processed_at=datetime.fromtimestamp(model_file_metadata["timestamp"] / 1e9),
             )
+            model_metadata = generator.getMetadata()
+            # ------------------------------------------------------
+
             db.add(db_model_file)
+            
+            db_building.height_meters = float(model_metadata["total_height"])
+            
             db.commit()
             db.refresh(db_model_file)
         except Exception:
@@ -778,6 +794,8 @@ async def upload_stl(
 @app.post("/api/buildings/{id}/upload/excel", response_model=UploadJobResponse)
 async def upload_excel(id: UUID, file: UploadFile = File(...), db: Session = Depends(get_db), user: CognitoUser = Depends(get_current_user)):
     """Upload Excel file with stacking plan data"""
+    # TODO: Implement job queue (currently looking into Redis Queue). Will use backend to process in the meantime.
+    
     db_building = db.query(BuildingModel).filter(BuildingModel.id == id).first()
 
     if not db_building:
@@ -804,6 +822,10 @@ async def upload_excel(id: UUID, file: UploadFile = File(...), db: Session = Dep
 
     import uuid
     job_id = str(uuid.uuid4())
+    
+    # --- This will be moved to queue if we implement it ---
+    excel_load_to_db(io.BytesIO(content), id)
+    # ------------------------------------------------------
 
     return UploadJobResponse(data={
         "jobId": job_id,

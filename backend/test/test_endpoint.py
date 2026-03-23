@@ -7,6 +7,7 @@ import json
 
 from models import *
 from auth import CognitoUser, get_current_user
+from test_values import TEST_BUILDING_ID
 
 @pytest.fixture(scope="module")
 def client():
@@ -24,12 +25,9 @@ def client():
     yield client
     del app.dependency_overrides[get_current_user]
 
-@pytest.mark.parametrize("id", [
-    ("bd1971c3-2216-49ee-a235-720b4df08bf0")
-])
-def test_stacking_plan(client, id):
+def test_stacking_plan(client):
     response = client.get(
-        f"/api/buildings/{id}/stacking-plan",
+        f"/api/buildings/{TEST_BUILDING_ID}/stacking-plan",
         headers={
             "Authorization": ""
         }

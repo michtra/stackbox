@@ -28,8 +28,8 @@ class FloorGenerator:
     def generateFloors(self):
         # Find center
         plane_origin = (
-            (self.mesh.bounds[0, 0] + self.mesh.bounds[1, 0]) / 2 + self.center[0],
-            (self.mesh.bounds[0, 1] + self.mesh.bounds[1, 1]) / 2 + self.center[1],
+            (self.mesh.bounds[0, 0] + self.mesh.bounds[1, 0]) / 2 - self.center[0],
+            (self.mesh.bounds[0, 1] + self.mesh.bounds[1, 1]) / 2 - self.center[1],
             self.mesh.bounds[0, 2]
         )
         
