@@ -28,11 +28,26 @@ def client():
 def test_stacking_plan(client):
     response = client.get(
         f"/api/buildings/{TEST_BUILDING_ID}/stacking-plan",
-        headers={
-            "Authorization": ""
-        }
     )
     data = json.dumps(response.json(), indent=4)
     Path("test/output").mkdir(exist_ok=True)
     Path(f'test/output/test_stacking_plan_out.json').write_text(data)
+    assert response.status_code == 200
+
+@pytest.mark.parametrize("page, limit", [
+    (1, 20),
+    (1, 2),
+    (2, 2),
+])
+def test_building_listing(client, page, limit):
+    response = client.get(
+        f"/api/buildings",
+        params={
+            "page": page,
+            "limit": limit,
+        }
+    )
+    data = json.dumps(response.json(), indent=4)
+    Path("test/output").mkdir(exist_ok=True)
+    Path(f'test/output/test_building_listing.json').write_text(data)
     assert response.status_code == 200

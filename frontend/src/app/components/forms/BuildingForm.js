@@ -24,8 +24,6 @@ export default function BuildingForm({ srcProps, isDarkMode, mapRef, modelProps 
 
     const handleSubmit = async () => {
         if (srcProps.modelSrc && srcProps.excelSrc) {
-            console.log(srcProps.modelSrc);
-            console.log(srcProps.excelSrc);
             const metadata = {
                 building: {
                     ...buildingMetadata,
@@ -39,7 +37,6 @@ export default function BuildingForm({ srcProps, isDarkMode, mapRef, modelProps 
                     rotation: modelProps.rotation
                 }
             };
-            console.log(metadata)
             // TODO: Cache building metadata somewhere.
             createBuilding(srcProps.modelSrc, srcProps.excelSrc, metadata).then((buildingId) => {
                 if (buildingId) {

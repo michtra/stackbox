@@ -131,13 +131,18 @@ async def list_buildings(
                         .where(PropertyManagerModel.user_id == user.id)
     if city:
         building_query = building_query.where(BuildingModel.address_city == city)
+
+    total_buildings_query = select(func.count(BuildingModel.id)) \
+                            .join(PropertyManagerModel, BuildingModel.id == PropertyManagerModel.building_id) \
+                            .where(PropertyManagerModel.user_id == user.id)
+    
+    total_buildings = db.execute(total_buildings_query).scalar()
+    total_pages = math.ceil(total_buildings / limit)
     
     offset = (page - 1) * limit
     building_query = building_query.offset(offset).limit(limit)
 
     buildings = db.execute(building_query).scalars().all()
-    total_buildings = len(buildings)
-    total_pages = math.ceil(total_buildings / limit)
 
     return BuildingListResponse(
         data = [db_building_to_pydantic(b) for b in buildings],
@@ -342,6 +347,12 @@ async def get_stacking_plan(id: UUID, db: Session = Depends(get_db), user: Cogni
                         ) \
                         .order_by(FileModel.created_at.desc())
     geometry_s3_key = db.execute(geometry_query).first().file_path
+    
+    if not geometry_s3_key:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Geometry does not exist for building: {e}"
+        )
 
     try:
         geometry_json = json.loads(download_file(geometry_s3_key))
