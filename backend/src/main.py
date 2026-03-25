@@ -740,7 +740,7 @@ async def upload_stl(
             center = (centerX, centerY) if centerX is not None and centerY is not None else None
             scale = (scaleX, scaleY, scaleZ) if scaleX is not None and scaleY is not None and scaleZ is not None else None
 
-            # --- This will be moved to queue if we implement it ---
+            # TODO move to queue if we implement it
             generator = FloorGenerator(
                 model=tmp_path,
                 floors=db_building.total_floors,
@@ -823,7 +823,7 @@ async def upload_excel(id: UUID, file: UploadFile = File(...), db: Session = Dep
     import uuid
     job_id = str(uuid.uuid4())
     
-    # --- This will be moved to queue if we implement it ---
+    # TODO move to queue if we implement it
     excel_load_to_db(io.BytesIO(content), id)
     # ------------------------------------------------------
 
