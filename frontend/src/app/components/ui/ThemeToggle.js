@@ -2,8 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { Monitor } from "@mui/icons-material";
-import { LightMode } from "@mui/icons-material";
-import { DarkMode } from "@mui/icons-material";
 
 export default function ThemeToggle({ setIsDarkMode }) {
     const [selectedTheme, setSelectedTheme] = useState(0);

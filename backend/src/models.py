@@ -3,9 +3,11 @@ Pydantic models for Stackbox API
 """
 
 from datetime import datetime
-from typing import Optional, List, Literal
+from typing import Optional, List, Literal, Annotated
 from uuid import UUID
 from pydantic import BaseModel, Field, EmailStr
+
+HexColor = Annotated[str, Field(pattern=r"^#[0-9A-Fa-f]{6}$")]
 
 
 class Address(BaseModel):
@@ -70,6 +72,7 @@ class Tenant(BaseModel):
     id: UUID
     name: str
     contact: Contact
+    color: Optional[HexColor] = None
     createdAt: datetime
     updatedAt: datetime
 
@@ -78,12 +81,14 @@ class TenantCreate(BaseModel):
     """Model for creating a new tenant (without id and timestamps)"""
     name: str
     contact: Contact
+    color: Optional[HexColor] = None
 
 
 class TenantUpdate(BaseModel):
     """Model for updating a tenant (partial update allowed)"""
     name: Optional[str] = None
     contact: Optional[Contact] = None
+    color: Optional[HexColor] = None
 
 
 class GeoJSONGeometry(BaseModel):
@@ -117,7 +122,9 @@ class Geometry(BaseModel):
 class Occupancy(BaseModel):
     """Tenant occupancy on a floor"""
     tenantId: UUID
+    roomNumber: Optional[str] = None
     squareFeet: Optional[float] = None
+    baseRent: Optional[float] = None
     leaseStart: Optional[datetime] = None
     leaseEnd: Optional[datetime] = None
 
@@ -145,7 +152,6 @@ class Floor(BaseModel):
     floorNumber: int
     label: Optional[str] = None
     squareFeet: Optional[float] = None
-    geometry: Optional[UUID] = None
     occupancies: List[Occupancy] = Field(default_factory=list)
 
 
@@ -160,7 +166,7 @@ class StackingPlan(BaseModel):
     building: Building
     tenants: List[Tenant]
     floors: List[Floor]
-    geometries: List[Geometry]
+    geometries: List[List[List[List[float]]]]
 
 
 class TenantOccupancyInfo(BaseModel):

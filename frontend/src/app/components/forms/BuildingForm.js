@@ -1,26 +1,80 @@
 "use client"
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import clsx from "clsx";
 import { Slider } from "@mui/material";
 import { Upload } from "@mui/icons-material";
 import { Apartment } from "@mui/icons-material";
 import { ListAlt } from "@mui/icons-material";
 
-import { urlToFile } from "@/app/utilities/endpoints";
+import { createBuilding, getBuildingMetadata } from "@/app/utilities/endpoints";
 import NumberInput from "@/app/components/ui/NumberInput";
 import { loadAdjustmentsBuildingMesh } from "@/app/utilities/processor";
 
 export default function BuildingForm({ srcProps, isDarkMode, mapRef, modelProps }) {
     // TODO: Google Maps Platform Place Autocomplete integration.
+    const router = useRouter();
 
     const [modelFileName, setModelFileName] = useState();
     const [excelFileName, setExcelFileName] = useState();
     const [modelFileURL, setModelFileURL] = useState();
     const [excelFileURL, setExcelFileURL] = useState();
+    const [buildingMetadata, setBuildingMetadata] = useState();
+
+    const isInputValidRefs = {
+        isLatValidRef: useRef(true),
+        isLngValidRef: useRef(true),
+    }
+
+    const handleSubmit = async () => {
+        if (srcProps.modelSrc && srcProps.excelSrc && Object.values(isInputValidRefs).every((ref) => ref.current)) {
+            const metadata = {
+                building: {
+                    ...buildingMetadata,
+                    location: {
+                        latitude: modelProps.coordLat,
+                        longitude: modelProps.coordLng,
+                    }
+                },
+                adjustments: {
+                    scale: 10 ** modelProps.scale,
+                    rotation: modelProps.rotation
+                }
+            };
+            // TODO: Cache building metadata somewhere.
+            createBuilding(srcProps.modelSrc, srcProps.excelSrc, metadata).then((buildingId) => {
+                if (buildingId) {
+                    router.push(`/property/${buildingId}`);
+                }
+            });
+        }
+    }
+
+    useEffect(() => {
+        getBuildingMetadata(srcProps.excelSrc).then((val) => {
+            setBuildingMetadata(val);
+        });
+    }, []);
 
     return (
         <div className="flex flex-col w-full h-full p-6 gap-8 overflow-y-scroll">
+            <div className="flex flex-col gap-2">
+                <span>Name of Building</span>
+                <input
+                    type="text"
+                    className="p-2 gap-2 outline rounded-sm focus-within:outline-blue-500 focus-within:outline-2"
+                    value={buildingMetadata?.name ? buildingMetadata.name : ""}
+                    onChange={(e) => {
+                        setBuildingMetadata((val) => {
+                            return {
+                                ...val,
+                                name: e.target.value,
+                            }
+                        });
+                    }}
+                />
+            </div>
             <div className="flex flex-col">
                 <span>Scale</span>
                 <Slider
@@ -84,6 +138,7 @@ export default function BuildingForm({ srcProps, isDarkMode, mapRef, modelProps 
                     increment={0.0001}
                     min={-90}
                     max={90}
+                    isValid={isInputValidRefs.isLatValidRef}
                     onChange={(val) => {
                         modelProps.setCoordLat(val);
                         modelProps.modelRef.current.setCoords([modelProps.coordLng, val]);
@@ -98,6 +153,7 @@ export default function BuildingForm({ srcProps, isDarkMode, mapRef, modelProps 
                     increment={0.0001}
                     min={-180}
                     max={180}
+                    isValid={isInputValidRefs.isLngValidRef}
                     onChange={(val) => {
                         modelProps.setCoordLng(val);
                         modelProps.modelRef.current.setCoords([val, modelProps.coordLat]);
@@ -190,10 +246,7 @@ export default function BuildingForm({ srcProps, isDarkMode, mapRef, modelProps 
             <button
                 className="flex flex-col justify-center items-center w-full h-12 p-2 gap-2 outline rounded-sm cursor-pointer hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-all"
                 onClick={() => {
-                    if (srcProps.modelSrc && srcProps.excelSrc) {
-                        console.log(srcProps.modelSrc);
-                        console.log(srcProps.excelSrc);
-                    }
+                    handleSubmit();
                 }}
             >
                 Submit

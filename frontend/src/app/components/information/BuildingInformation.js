@@ -1,12 +1,13 @@
 "use client"
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import clsx from "clsx";
 import { Menu, MenuItem } from "@mui/material";
 import { KeyboardArrowDown } from "@mui/icons-material";
 
 import BuildingStatistics from "@/app/components/information/BuildingStatistics";
 import BuildingComposition from "@/app/components/information/BuildingComposition";
+import TenantColors from "@/app/components/information/TenantColors";
 
 /**
  * 
@@ -45,10 +46,10 @@ function getRentalData(stackingData) {
                 }
 
                 // Calculating weighted total lease term, later divided by total occupied SF
-                weightedTotalLeaseTerm += leaseLeftMonths * occupancy.squareFeet.parsedValue;
+                weightedTotalLeaseTerm += leaseLeftMonths * occupancy.squareFeet;
 
-                totalOccupiedSF += occupancy.squareFeet.parsedValue;
-                rentalIncome += occupancy.baseRent.parsedValue;
+                totalOccupiedSF += occupancy.squareFeet;
+                rentalIncome += occupancy.baseRent;
 
                 rentRoll.push({
                     "id": `${floor.floorNumber}-${occupancy.roomNumber}-${occupancy.tenantId}`,
@@ -60,9 +61,9 @@ function getRentalData(stackingData) {
                     "leaseStart": leaseStart,
                     "leaseEnd": leaseEnd,
                     "leaseLeftMonths": leaseLeftMonths,
-                    "squareFeet": occupancy.squareFeet.parsedValue,
-                    "baseRent": occupancy.baseRent.parsedValue,
-                    "psfRent": occupancy.baseRent.parsedValue / occupancy.squareFeet.parsedValue,
+                    "squareFeet": occupancy.squareFeet,
+                    "baseRent": occupancy.baseRent,
+                    "psfRent": occupancy.baseRent / occupancy.squareFeet,
                 });
             }
         });
@@ -134,6 +135,14 @@ export default function BuildingInformation({ stackingData, isDarkMode }) {
                             >
                                 Tenant Composition
                             </MenuItem>
+                            <MenuItem
+                                onClick={() => {
+                                    setSelectedTab("Tenant Colors");
+                                    setAnchorEl(null);
+                                }}
+                            >
+                                Tenant Colors
+                            </MenuItem>
                         </Menu>
                     </div>
                     <div className="w-48 h-10 flex flex-row bg-black/10 dark:bg-white/10 p-1 rounded-lg">
@@ -157,6 +166,9 @@ export default function BuildingInformation({ stackingData, isDarkMode }) {
                     )}
                     {selectedTab === "Tenant Composition" && (
                         <BuildingComposition stackingData={stackingData} isDarkMode={isDarkMode} timeUnit={timeUnit} rentalData={rentalData} />
+                    )}
+                    {selectedTab === "Tenant Colors" && (
+                        <TenantColors stackingData={stackingData} />
                     )}
                 </div>
             </div>

@@ -2,7 +2,7 @@ import numpy as np
 import trimesh
 
 class FloorGenerator:
-    def __init__(self, model, floors, base_elevation = 0.0, center = (0, 0), scale = (1.0, 1.0), rotation = 0.0):
+    def __init__(self, model, floors, base_elevation = 0.0, center = (0, 0), scale = (1.0, 1.0, 1.0), rotation = 0.0):
         self.mesh = trimesh.load_mesh(model)
         self.floors = floors
         self.base_elevation = base_elevation
@@ -14,7 +14,7 @@ class FloorGenerator:
     
     def _apply_transformation(self):
         # Applying scale, rotation, and centering
-        if self.scale != (1.0, 1.0):
+        if self.scale != (1.0, 1.0, 1.0):
             self.mesh.apply_scale(self.scale)
         
         if self.rotation != 0:
@@ -28,8 +28,8 @@ class FloorGenerator:
     def generateFloors(self):
         # Find center
         plane_origin = (
-            (self.mesh.bounds[0, 0] + self.mesh.bounds[1, 0]) / 2 + self.center[0],
-            (self.mesh.bounds[0, 1] + self.mesh.bounds[1, 1]) / 2 + self.center[1],
+            (self.mesh.bounds[0, 0] + self.mesh.bounds[1, 0]) / 2 - self.center[0],
+            (self.mesh.bounds[0, 1] + self.mesh.bounds[1, 1]) / 2 - self.center[1],
             self.mesh.bounds[0, 2]
         )
         

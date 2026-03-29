@@ -10,7 +10,6 @@ import {
     Tooltip,
     Legend
 } from 'chart.js';
-import { useEffect, useState } from 'react';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
@@ -64,15 +63,15 @@ function buildFloorOccupancyData(stackingData) {
 
         floor.occupancies.forEach((tenant) => {
             if (tenant.tenantId in datasets && (new Date(tenant.leaseStart)) <= now <= (new Date(tenant.leaseEnd))) {
-                datasets[tenant.tenantId].sf[floor.floorNumber - 1] = tenant.squareFeet.parsedValue;
-                datasets[tenant.tenantId].data[floor.floorNumber - 1] = (tenant.squareFeet.parsedValue / floor.squareFeet.parsedValue) * 100;
-                totalOccupancy += tenant.squareFeet.parsedValue;
+                datasets[tenant.tenantId].sf[floor.floorNumber - 1] = tenant.squareFeet;
+                datasets[tenant.tenantId].data[floor.floorNumber - 1] = (tenant.squareFeet / floor.squareFeet) * 100;
+                totalOccupancy += tenant.squareFeet;
             }
         });
 
         // Calculate vacancy for this floor
-        vacancyDataset.sf[floor.floorNumber - 1] = floor.squareFeet.parsedValue - totalOccupancy;
-        vacancyDataset.data[floor.floorNumber - 1] = ((floor.squareFeet.parsedValue - totalOccupancy) / floor.squareFeet.parsedValue) * 100;
+        vacancyDataset.sf[floor.floorNumber - 1] = floor.squareFeet - totalOccupancy;
+        vacancyDataset.data[floor.floorNumber - 1] = ((floor.squareFeet - totalOccupancy) / floor.squareFeet) * 100;
     });
 
     // Filter out tenants with no occupancy at all

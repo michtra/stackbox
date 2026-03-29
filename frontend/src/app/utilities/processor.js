@@ -79,7 +79,7 @@ function proportionWall(floorPlanShapes, tenantList, totalSF, floorNum, building
     // Tenant position array, stores [shape index, edge index, proportion within edge after edge index].
     const tenantPositions = Array(Object.keys(tenantList).length).fill(["", 0, 0, 0]);
     tenantWallLengths.forEach(([tenant, wallPosition], tenantIndex) => {
-        while(wallPosition > edgeLengths[currShapeIndex].at(-1)) {
+        while(currShapeIndex < edgeLengths.length - 1 && wallPosition > edgeLengths[currShapeIndex].at(-1)) {
             currShapeIndex++;
         }
         let [low, high, mid] = [0, edgeLengths[currShapeIndex].length - 1, 0];
@@ -228,17 +228,17 @@ function proportionBuilding(stackingData) {
         tenantList[floorData["floorNumber"] - 1] = {};
         floorData["occupancies"].forEach((occupancyData) => {
             tenantList[floorData["floorNumber"] - 1][`${occupancyData["tenantId"]}`] = {
-                "sf": occupancyData["squareFeet"]["parsedValue"],
+                "sf": occupancyData["squareFeet"],
                 "color": tenantObject[occupancyData["tenantId"]]["color"]
             };
         });
-        totalSFList[floorData["floorNumber"] - 1] = floorData["squareFeet"]["parsedValue"];
+        totalSFList[floorData["floorNumber"] - 1] = floorData["squareFeet"];
     });
 
     /*
     Calculating base and roof heights for each floor.
     */
-    const buildingFloorHeight = stackingData["building"]["metadata"]["heightMeters"]["parsedValue"] / stackingData["building"]["metadata"]["totalFloors"];
+    const buildingFloorHeight = stackingData["building"]["metadata"]["heightMeters"] / stackingData["building"]["metadata"]["totalFloors"];
     let currHeight = 0;
     for(let i = 0; i < buildingFloorHeightMinList.length; i++) {
         buildingFloorHeightMinList[i] = currHeight;
@@ -260,6 +260,11 @@ function proportionBuilding(stackingData) {
     return geoJSONFeatures;
 }
 
+/**
+ * Converts tenant list to a JS object with tenant ID as key.
+ * @param {Object} tenantJSON The "tenants" part of StackingPlan model.
+ * @returns JS object with tenant UUID as key.
+ */
 function tenantJSONToObject(tenantJSON) {
     let tenantObject = {};
     tenantJSON.forEach((tenant) => {
@@ -275,6 +280,11 @@ function tenantJSONToObject(tenantJSON) {
 }
 
 
+/**
+ * Converts building listing endpoint JSON to GeoJSON used by MapBox GL JS.
+ * @param {Object} propertyListingData Building listing JSON endpoint.
+ * @returns GeoJSON containing building listing locations.
+ */
 function propertyListingToGeoJSONFeatures(propertyListingData) {
     const geoJSONFeatures = {
         "type": "geojson",
@@ -300,8 +310,8 @@ function propertyListingToGeoJSONFeatures(propertyListingData) {
             },
             "geometry": {
                 "coordinates": [
-                    building.location.longitude.parsedValue,
-                    building.location.latitude.parsedValue,
+                    building.location.longitude,
+                    building.location.latitude,
                 ],
                 "type": "Point"
             }
@@ -311,6 +321,22 @@ function propertyListingToGeoJSONFeatures(propertyListingData) {
 }
 
 
+/**
+ * Building adjustments screen Threebox load/redraw function.
+ * @param {string} src Blob URL to STL 3D model.
+ * @param {Object} modelProps Map containing data required to render 3D model.
+ * @param {*} modelProps.modelRef Reference to Threebox object.
+ * @param {*} modelProps.meshRef Reference to Three.js mesh.
+ * @param {*} modelProps.scale Model scale state.
+ * @param {*} modelProps.setScale Model scale setter.
+ * @param {*} modelProps.coordLng Model longitude coorinate state.
+ * @param {*} modelProps.setCoordLng Model longitude coorinate setter.
+ * @param {*} modelProps.coordLat Model latitude coorinate state.
+ * @param {*} modelProps.setCoordLat Model latitude coorinate setter.
+ * @param {*} modelProps.rotation Model rotation (degrees from 0 to 360) state.
+ * @param {*} modelProps.setRotation Model rotation (degrees from 0 to 360) setter.
+ * @param {*} mapRef Reference to MapBox GL JS map. Only pass reference if redrawing.
+ */
 function loadAdjustmentsBuildingMesh(src, modelProps, mapRef=null) {
     const loader = new STLLoader();
     loader.load(src, (geometry) => {
@@ -371,11 +397,17 @@ function loadAdjustmentsBuildingMesh(src, modelProps, mapRef=null) {
 }
 
 
-function meterToLatLng(meter, lat, lng) {
+/**
+ * Converts meter scale to lat/lng scale.
+ * @param {float} meter Scale of 3D model (if Threebox scaling is set to meter).
+ * @param {float} lat Latitude coordinate of building.
+ * @returns 
+ */
+function meterToLatLng(meter, lat) {
     // Based on https://gis.stackexchange.com/questions/2951/algorithm-for-offsetting-latitude-longitude-by-some-amount-of-meters
     // Using 111111 meters per degree lat is better for lower lat while 111319.5 meters per degree lat is better for higher lat
-    latScale = meter / 111319.5;
-    lngScale = latScale / Math.cos(lat * Math.PI / 180);
+    const latScale = meter / 111319.5;
+    const lngScale = latScale / Math.cos(lat * Math.PI / 180);
     return {
         lat: latScale,
         lng: lngScale,

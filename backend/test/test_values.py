@@ -1,0 +1,4 @@
+from uuid import UUID
+
+TEST_USER_ID = UUID("2a40cef0-ba3d-4643-bb3f-98b21b5721e4")
+TEST_BUILDING_ID = UUID("100a5081-a158-4abb-9318-2c420f6ecd2c")

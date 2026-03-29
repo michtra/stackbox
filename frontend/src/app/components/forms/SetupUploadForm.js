@@ -29,7 +29,6 @@ export default function SetupUploadForm({ isUploadPanelOpen, setIsUploadPanelOpe
                 <div className="flex flex-col w-full h-full p-4 gap-4">
                     <div className="flex flex-col">
                         <span className="text-xl font-medium">Add New Property</span>
-                        <span className="text-sm text-black/75 dark:text-white/75">It takes just two files!</span>
                     </div>
                     <div className="flex flex-row w-full h-full gap-4">
                         <label htmlFor="model_file_uploader" className="relative flex flex-col w-full h-full">
