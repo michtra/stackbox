@@ -19,8 +19,8 @@ export default function Page() {
     const [excelSrc, setExcelSrc] = useState(setupParams.get("excel_url"));
 
     const [scale, setScale] = useState(0);
-    const [coordLng, setCoordLng] = useState(-95.36576714742297);
-    const [coordLat, setCoordLat] = useState(29.76046335699732);
+    const [coordLng, setCoordLng] = useState(0);
+    const [coordLat, setCoordLat] = useState(0);
     const [rotation, setRotation] = useState(0);
 
     const mapRef = useRef();
