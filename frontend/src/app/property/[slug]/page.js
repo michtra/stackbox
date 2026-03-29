@@ -18,9 +18,11 @@ export default function Page() {
 
     useEffect(() => {
         getBuilding(params.slug).then((val) => {
-            setStacking(val);
+            if (val.building && val.tenants && val.floors && val.geometries) {
+                setStacking(val);
+            }
         });
-    }, [])
+    }, [params.slug]);
 
     return (
         <div className="relative w-full min-h-screen overflow-hidden">

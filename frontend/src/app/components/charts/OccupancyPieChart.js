@@ -8,7 +8,6 @@ import {
     Legend,
     Title
 } from 'chart.js';
-import { useEffect, useState } from 'react';
 
 ChartJS.register(ArcElement, Tooltip, Legend, Title);
 

@@ -1,5 +1,5 @@
 import pytest
-from sqlalchemy import text, select, inspect, and_, or_
+from sqlalchemy import text, select, and_, or_
 from collections import Counter
 
 from db_models import *
@@ -105,10 +105,15 @@ def test_db_connection():
         SELECT DISTINCT tenants.*
         FROM tenants
         INNER JOIN occupancies
-            ON tenants.id = occupancies.tenant_id;
+            ON tenants.id = occupancies.tenant_id
+        INNER JOIN floors
+            ON floors.id = occupancies.floor_id
+        WHERE floors.building_id = '{str(TEST_BUILDING_ID)}'
         """,
         select(TenantModel).distinct() \
-        .join(OccupancyModel, OccupancyModel.tenant_id == TenantModel.id),
+        .join(OccupancyModel, OccupancyModel.tenant_id == TenantModel.id) \
+        .join(FloorModel, FloorModel.id == OccupancyModel.floor_id) \
+        .where(FloorModel.building_id == str(TEST_BUILDING_ID)),
         True
     ),
     (

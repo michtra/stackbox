@@ -1,7 +1,7 @@
 "use client"
 
 import clsx from "clsx";
-import { Fragment, useEffect, useState } from "react";
+import { useState } from "react";
 import { Search } from "@mui/icons-material";
 import { useRouter } from "next/navigation";
 import { Pagination } from "@mui/material";
@@ -59,7 +59,7 @@ export default function PropertyListing({ className, propertyListingData, mapRef
                                     page={paginationProps.page} 
                                     onChange={(e, val) => {
                                         // TODO: Add backend integration after adding test data into RDS
-                                        setPage(val);
+                                        paginationProps.setPage(val);
                                     }}
                                 />
                             ] :

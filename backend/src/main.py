@@ -325,7 +325,9 @@ async def get_stacking_plan(id: UUID, db: Session = Depends(get_db), user: Cogni
     floors: list[FloorModel] = db.execute(floors_query).scalars().all()
 
     tenants_query = select(TenantModel).distinct() \
-                    .join(OccupancyModel, OccupancyModel.tenant_id == TenantModel.id)
+                    .join(OccupancyModel, OccupancyModel.tenant_id == TenantModel.id) \
+                    .join(FloorModel, FloorModel.id == OccupancyModel.floor_id) \
+                    .where(FloorModel.building_id == id)
     tenants: list[TenantModel] = db.execute(tenants_query).scalars().all()
     tenants_map: dict[UUID, TenantModel] = {}
     for tenant in tenants:
@@ -346,7 +348,8 @@ async def get_stacking_plan(id: UUID, db: Session = Depends(get_db), user: Cogni
                             )
                         ) \
                         .order_by(FileModel.created_at.desc())
-    geometry_s3_key = db.execute(geometry_query).first().file_path
+    geometry = db.execute(geometry_query).first()
+    geometry_s3_key = geometry.file_path if geometry != None else None
     
     if not geometry_s3_key:
         raise HTTPException(
@@ -835,7 +838,10 @@ async def upload_excel(id: UUID, file: UploadFile = File(...), db: Session = Dep
     job_id = str(uuid.uuid4())
     
     # TODO move to queue if we implement it
-    excel_load_to_db(io.BytesIO(content), id)
+    try:
+        excel_load_to_db(io.BytesIO(content), id)
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
     # ------------------------------------------------------
 
     return UploadJobResponse(data={

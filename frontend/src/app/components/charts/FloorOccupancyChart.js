@@ -10,7 +10,6 @@ import {
     Tooltip,
     Legend
 } from 'chart.js';
-import { useEffect, useState } from 'react';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 

@@ -22,8 +22,13 @@ export default function BuildingForm({ srcProps, isDarkMode, mapRef, modelProps 
     const [excelFileURL, setExcelFileURL] = useState();
     const [buildingMetadata, setBuildingMetadata] = useState();
 
+    const isInputValidRefs = {
+        isLatValidRef: useRef(true),
+        isLngValidRef: useRef(true),
+    }
+
     const handleSubmit = async () => {
-        if (srcProps.modelSrc && srcProps.excelSrc) {
+        if (srcProps.modelSrc && srcProps.excelSrc && Object.values(isInputValidRefs).every((ref) => ref.current)) {
             const metadata = {
                 building: {
                     ...buildingMetadata,
@@ -133,6 +138,7 @@ export default function BuildingForm({ srcProps, isDarkMode, mapRef, modelProps 
                     increment={0.0001}
                     min={-90}
                     max={90}
+                    isValid={isInputValidRefs.isLatValidRef}
                     onChange={(val) => {
                         modelProps.setCoordLat(val);
                         modelProps.modelRef.current.setCoords([modelProps.coordLng, val]);
@@ -147,6 +153,7 @@ export default function BuildingForm({ srcProps, isDarkMode, mapRef, modelProps 
                     increment={0.0001}
                     min={-180}
                     max={180}
+                    isValid={isInputValidRefs.isLngValidRef}
                     onChange={(val) => {
                         modelProps.setCoordLng(val);
                         modelProps.modelRef.current.setCoords([val, modelProps.coordLat]);
