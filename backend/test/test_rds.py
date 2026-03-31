@@ -4,17 +4,12 @@ from collections import Counter
 
 from db_models import *
 from test_values import TEST_USER_ID, TEST_BUILDING_ID
+from conftest import skip_no_db, DB_AVAILABLE
 
-# try if our get_db function works
-try:
+if DB_AVAILABLE:
     from database import get_db
     gen = get_db()
     db = next(gen)
-    DB_AVAILABLE = True
-except Exception:
-    DB_AVAILABLE = False
-
-skip_no_db = pytest.mark.skipif(not DB_AVAILABLE, reason="Cannot get AWS RDS DB")
 
 @skip_no_db
 def test_db_connection():
