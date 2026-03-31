@@ -1,7 +1,11 @@
 from typing import Optional, List, Union, cast
 from uuid import UUID, uuid4
-from fastapi import Depends, FastAPI, HTTPException, Query, Path, UploadFile, File, Form, status
+from fastapi import Depends, FastAPI, HTTPException, Query, Path, Request, UploadFile, File, Form, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.util import get_remote_address
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from datetime import datetime
@@ -22,11 +26,27 @@ from db_models import BuildingModel, TenantModel, FloorModel, OccupancyModel, Ge
 from config import settings
 from routers import loaders
 from utilities.floorplan import FloorGenerator
-from auth import get_current_user, CognitoUser
+from auth import get_current_user, get_optional_user, CognitoUser, _build_cognito_user
 import tempfile
 import os
+import logging
+
+logger = logging.getLogger(__name__)
+
+
+def _rate_limit_key(request: Request) -> str:
+    """Key function: use Cognito sub if authenticated, otherwise fall back to IP."""
+    user: Optional[CognitoUser] = getattr(request.state, "rate_limit_user", None)
+    if user:
+        return user.sub
+    return get_remote_address(request)
+
+
+limiter = Limiter(key_func=_rate_limit_key, storage_uri=settings.rate_limit_storage_uri)
 
 app = FastAPI(title="Stackbox API")
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 app.add_middleware(
     CORSMiddleware,
@@ -35,6 +55,26 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.middleware("http")
+async def attach_user_to_request(request: Request, call_next):
+    """Resolve optional auth token early so _rate_limit_key can use the Cognito sub."""
+    from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+    from auth import _validate_token
+    request.state.rate_limit_user = None
+    auth_header = request.headers.get("Authorization", "")
+    if auth_header.startswith("Bearer "):
+        token = auth_header[7:]
+        try:
+            claims = _validate_token(token)
+            request.state.rate_limit_user = _build_cognito_user(claims)
+        except Exception as e:
+            # Invalid/expired token or auth not configured — fall back to IP keying.
+            # The endpoint's own auth dependency will reject the request with a proper 401.
+            logger.debug("Rate limit middleware: could not resolve user from token: %s", e)
+    return await call_next(request)
+
 
 def db_building_to_pydantic(db_building: BuildingModel) -> Building:
     """Converting database building model to Pydantic model"""
@@ -141,7 +181,8 @@ async def list_buildings(
     )
 
 @app.post("/api/buildings", status_code=201, response_model=BuildingResponse)
-async def create_building(building: BuildingCreate, db: Session = Depends(get_db), user: CognitoUser = Depends(get_current_user)):
+@limiter.limit(settings.rate_limit_buildings)
+async def create_building(request: Request, building: BuildingCreate, db: Session = Depends(get_db), user: CognitoUser = Depends(get_current_user)):
     """Create a new building"""
     existing = db.query(BuildingModel).filter(
         BuildingModel.name == building.name,
@@ -615,7 +656,9 @@ async def remove_occupancy(id: UUID, floorNumber: int, tenantId: UUID, db: Sessi
 
 # File Uploads
 @app.post("/api/buildings/{id}/upload/stl", response_model=UploadJobResponse)
+@limiter.limit(settings.rate_limit_uploads)
 async def upload_stl(
+    request: Request,
     id: UUID,
     file: UploadFile = File(...),
     floorHeight: float = Form(...),
@@ -689,7 +732,8 @@ async def upload_stl(
     })
 
 @app.post("/api/buildings/{id}/upload/excel", response_model=UploadJobResponse)
-async def upload_excel(id: UUID, file: UploadFile = File(...), db: Session = Depends(get_db), user: CognitoUser = Depends(get_current_user)):
+@limiter.limit(settings.rate_limit_uploads)
+async def upload_excel(request: Request, id: UUID, file: UploadFile = File(...), db: Session = Depends(get_db), user: CognitoUser = Depends(get_current_user)):
     """Upload Excel file with stacking plan data"""
     db_building = db.query(BuildingModel).filter(BuildingModel.id == id).first()
 
