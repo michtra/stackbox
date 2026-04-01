@@ -302,11 +302,7 @@ function propertyListingToGeoJSONFeatures(propertyListingData) {
             "properties": {
                 "id": building.id,
                 "name": building.name,
-                "street": building.street,
-                "city": building.city,
-                "state": building.state,
-                "zip": building.zip,
-                "country": building.country,
+                ...building.address,
             },
             "geometry": {
                 "coordinates": [
