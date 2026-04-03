@@ -1,4 +1,4 @@
-from typing import Optional, List, Union, cast
+from typing import Optional, List, Union, cast, Annotated
 from uuid import UUID, uuid4
 from fastapi import Depends, FastAPI, HTTPException, Query, Path, Request, UploadFile, File, Form, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -7,9 +7,10 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy import func, select, and_, or_
 from datetime import datetime
 import math
+import json
 
 from models import (
     Building, BuildingCreate, BuildingUpdate, BuildingListResponse, BuildingResponse,
@@ -22,13 +23,16 @@ from models import (
 )
 from utilities.file_storage import save_upload, delete_upload
 from database import get_db
-from db_models import BuildingModel, TenantModel, FloorModel, OccupancyModel, GeometryModel
+from db_models import BuildingModel, TenantModel, FloorModel, OccupancyModel, FileModel, UserModel, PropertyManagerModel
 from config import settings
 from routers import loaders
-from utilities.floorplan import FloorGenerator
+from utilities.floor_plan import FloorGenerator
 from auth import get_current_user, get_optional_user, CognitoUser, _build_cognito_user
+from utilities.file_loader import excel_loader, excel_load_to_db
+from s3 import download_file
 import tempfile
 import os
+import io
 import logging
 
 logger = logging.getLogger(__name__)
@@ -123,11 +127,12 @@ def db_floor_to_pydantic(db_floor: FloorModel) -> Floor:
         floorNumber = cast(int, db_floor.floor_number),
         label = cast(str, db_floor.label),
         squareFeet = cast(float, db_floor.square_feet) if db_floor.square_feet is not None else None,
-        geometry = cast(UUID, db_floor.geometry_id),
         occupancies = [
             Occupancy(
                 tenantId = cast(UUID, occ.tenant_id),
+                roomNumber = occ.room_num,
                 squareFeet = occ.square_feet,
+                baseRent = occ.base_rent,
                 leaseStart = cast(datetime, occ.lease_start) if occ.lease_start else None,
                 leaseEnd = cast(datetime, occ.lease_end) if occ.lease_end else None
             ) for occ in db_floor.occupancies
@@ -161,14 +166,23 @@ async def list_buildings(
     user: CognitoUser = Depends(get_current_user)
 ):
     """List all buildings with pagination"""
-    query = db.query(BuildingModel)
+    building_query = select(BuildingModel) \
+                        .join(PropertyManagerModel, BuildingModel.id == PropertyManagerModel.building_id) \
+                        .where(PropertyManagerModel.user_id == user.id)
     if city:
-        query = query.filter(BuildingModel.address_city == city)
+        building_query = building_query.where(BuildingModel.address_city == city)
 
-    total_buildings = query.count()
+    total_buildings_query = select(func.count(BuildingModel.id)) \
+                            .join(PropertyManagerModel, BuildingModel.id == PropertyManagerModel.building_id) \
+                            .where(PropertyManagerModel.user_id == user.id)
+    
+    total_buildings = db.execute(total_buildings_query).scalar()
     total_pages = math.ceil(total_buildings / limit)
+    
     offset = (page - 1) * limit
-    buildings = query.offset(offset).limit(limit).all()
+    building_query = building_query.offset(offset).limit(limit)
+
+    buildings = db.execute(building_query).scalars().all()
 
     return BuildingListResponse(
         data = [db_building_to_pydantic(b) for b in buildings],
@@ -182,8 +196,9 @@ async def list_buildings(
 
 @app.post("/api/buildings", status_code=201, response_model=BuildingResponse)
 @limiter.limit(settings.rate_limit_buildings)
-async def create_building(request: Request, building: BuildingCreate, db: Session = Depends(get_db), user: CognitoUser = Depends(get_current_user)):
+async def create_building(request: Request, building: Annotated[str, Form()], db: Session = Depends(get_db), user: CognitoUser = Depends(get_current_user)):
     """Create a new building"""
+    building = BuildingCreate.model_validate_json(building)
     existing = db.query(BuildingModel).filter(
         BuildingModel.name == building.name,
         BuildingModel.address_city == building.address.city
@@ -211,17 +226,9 @@ async def create_building(request: Request, building: BuildingCreate, db: Sessio
         gross_square_feet=building.metadata.grossSquareFeet,
         year_built=building.metadata.yearBuilt
     )
+    
     try:
         db.add(db_building)
-        db.commit()
-        db.refresh(db_building)
-
-        for floor_num in range(building.metadata.totalFloors):
-            db_floor = FloorModel(
-                building_id=db_building.id,
-                floor_number=floor_num
-            )
-            db.add(db_floor)
         db.commit()
         db.refresh(db_building)
     except Exception as e:
@@ -230,6 +237,23 @@ async def create_building(request: Request, building: BuildingCreate, db: Sessio
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to create building: {str(e)}"
         )
+    
+    # Add current user as property manager
+    db_property_manager = PropertyManagerModel(
+        user_id=user.id,
+        building_id=db_building.id,
+    )
+    
+    try:
+        db.add(db_property_manager)
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to assign property manager: {str(e)}"
+        )
+    
     return BuildingResponse(data=db_building_to_pydantic(db_building))
 
 @app.get("/api/buildings/{id}", response_model=BuildingResponse)
@@ -242,6 +266,25 @@ async def get_building(id: UUID, db: Session = Depends(get_db), user: CognitoUse
             detail="Building not found"
         )
     return BuildingResponse(data=db_building_to_pydantic(building))
+
+@app.post("/api/buildings/metadata", status_code=status.HTTP_200_OK)
+async def get_building_metadata(file: UploadFile = File(...)):
+    """Gets building metadata (building data only) for setup and adjustments."""
+    
+    if not file.filename or not file.filename.endswith('.xlsx'):
+        raise HTTPException(
+            status_code = status.HTTP_400_BAD_REQUEST,
+            detail = "Invalid file type. Only Excel (.xlsx) files are accepted"
+        )
+
+    content = await file.read()
+    file.file.close()
+    
+    result = excel_loader(io.BytesIO(content), isBuildingOnly=True)
+    return {
+        "detail": f"{file.filename} metadata parsed successfully.",
+        "data": result,
+    }
 
 @app.put("/api/buildings/{id}", response_model=BuildingResponse)
 async def update_building(id: UUID, building: BuildingUpdate, db: Session = Depends(get_db), user: CognitoUser = Depends(get_current_user)):
@@ -306,7 +349,10 @@ async def delete_building(id: UUID, db: Session = Depends(get_db), user: Cognito
 @app.get("/api/buildings/{id}/stacking-plan", response_model=StackingPlanResponse)
 async def get_stacking_plan(id: UUID, db: Session = Depends(get_db), user: CognitoUser = Depends(get_current_user)):
     """Get the complete stacking plan for a building"""
-    building = db.query(BuildingModel).filter(BuildingModel.id == id).first()
+    building_query = select(BuildingModel) \
+                        .where(BuildingModel.id == id) \
+                        .order_by(BuildingModel.updated_at.desc())
+    building: BuildingModel = db.execute(building_query).scalars().first()
 
     if not building:
         raise HTTPException(
@@ -314,23 +360,57 @@ async def get_stacking_plan(id: UUID, db: Session = Depends(get_db), user: Cogni
             detail="Building not found"
         )
 
-    floors = db.query(FloorModel).filter(FloorModel.building_id == id).order_by(FloorModel.floor_number).all()
+    floors_query = select(FloorModel) \
+                    .where(FloorModel.building_id == id) \
+                    .order_by(FloorModel.floor_number.asc())
+    floors: list[FloorModel] = db.execute(floors_query).scalars().all()
 
-    tenant_ids = set()
-    for floor in floors:
-        for occ in floor.occupancies:
-            tenant_ids.add(occ.tenant_id)
+    tenants_query = select(TenantModel).distinct() \
+                    .join(OccupancyModel, OccupancyModel.tenant_id == TenantModel.id) \
+                    .join(FloorModel, FloorModel.id == OccupancyModel.floor_id) \
+                    .where(FloorModel.building_id == id)
+    tenants: list[TenantModel] = db.execute(tenants_query).scalars().all()
+    tenants_map: dict[UUID, TenantModel] = {}
+    for tenant in tenants:
+        tenants_map[tenant.id] = tenant
 
-    tenants = db.query(TenantModel).filter(TenantModel.id.in_(tenant_ids)).all() if tenant_ids else []
+    occupancies_query = select(OccupancyModel) \
+                        .join(FloorModel, FloorModel.id == OccupancyModel.floor_id) \
+                        .where(FloorModel.building_id == id)
+    occupancies: list[OccupancyModel] = db.execute(occupancies_query).scalars().all()
+    for occupancy in occupancies:
+        tenants_map[occupancy.tenant_id].occupancies.append(occupancy)
 
-    geometry_ids = [f.geometry_id for f in floors if cast(bool, f.geometry_id)]
-    geometries = db.query(GeometryModel).filter(GeometryModel.id.in_(geometry_ids)).all() if geometry_ids else []
+    geometry_query = select(FileModel.file_path) \
+                        .where(
+                            and_(
+                                FileModel.building_id == id,
+                                FileModel.file_type == "processed_json"
+                            )
+                        ) \
+                        .order_by(FileModel.created_at.desc())
+    geometry = db.execute(geometry_query).first()
+    geometry_s3_key = geometry.file_path if geometry != None else None
+    
+    if not geometry_s3_key:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Geometry does not exist for building: {e}"
+        )
+
+    try:
+        geometry_json = json.loads(download_file(geometry_s3_key))
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Cannot download geometry: {e}"
+        )
 
     stacking_plan = StackingPlan(
         building=db_building_to_pydantic(building),
         tenants=[db_tenant_to_pydantic(t) for t in tenants],
         floors=[db_floor_to_pydantic(f) for f in floors],
-        geometries=[Geometry(id = cast(UUID, g.id), geometry = g.geometry) for g in geometries] # type: ignore
+        geometries=geometry_json
     )
 
     return StackingPlanResponse(data=stacking_plan)
@@ -661,17 +741,19 @@ async def upload_stl(
     request: Request,
     id: UUID,
     file: UploadFile = File(...),
-    floorHeight: float = Form(...),
     baseElevation: float = Form(...),
     centerX: Optional[float] = Form(None),
     centerY: Optional[float] = Form(None),
     scaleX: float = Form(1.0),
     scaleY: float = Form(1.0),
+    scaleZ: float = Form(1.0),
     rotation: float = Form(0.0),
     db: Session = Depends(get_db),
     user: CognitoUser = Depends(get_current_user)
 ):
     """Upload 3D building model for floor geometry extraction"""
+    # TODO: Implement job queue (currently looking into Redis Queue). Will use backend to process in the meantime.
+
     db_building = db.query(BuildingModel).filter(BuildingModel.id == id).first()
 
     if not db_building:
@@ -690,7 +772,20 @@ async def upload_stl(
     file.file.close()
 
     try:
-        metadata = save_upload(id, "stl", file.filename, content)
+        model_file_metadata = save_upload(id, "stl", file.filename, content)
+        db_model_file = FileModel(
+            building_id=id,
+            file_type="stl",
+            file_path=model_file_metadata["s3_key"],
+            original_filename=model_file_metadata["original_filename"],
+            file_size=model_file_metadata["file_size"],
+            status="uploaded",
+            created_at=datetime.fromtimestamp(model_file_metadata["timestamp"] / 1e9),
+            processed_at=datetime.fromtimestamp(model_file_metadata["timestamp"] / 1e9),
+        )
+        db.add(db_model_file)
+        db.commit()
+        db.refresh(db_model_file)
 
         # FloorGenerator needs a file path for trimesh.load_mesh()
         suffix = os.path.splitext(file.filename)[1]
@@ -700,8 +795,9 @@ async def upload_stl(
 
         try:
             center = (centerX, centerY) if centerX is not None and centerY is not None else None
-            scale = (scaleX, scaleY) if scaleX is not None and scaleY is not None else None
+            scale = (scaleX, scaleY, scaleZ) if scaleX is not None and scaleY is not None and scaleZ is not None else None
 
+            # TODO move to queue if we implement it
             generator = FloorGenerator(
                 model=tmp_path,
                 floors=db_building.total_floors,
@@ -711,8 +807,28 @@ async def upload_stl(
                 rotation=rotation
             )
             generator.generateFloors()
+            process_metadata = save_upload(id, "processed", "floors.json", json.dumps(generator.getCoords(), indent=4))
+            db_model_file = FileModel(
+                building_id=id,
+                file_type="processed_json",
+                file_path=process_metadata["s3_key"],
+                original_filename=process_metadata["original_filename"],
+                file_size=process_metadata["file_size"],
+                status="uploaded",
+                created_at=datetime.fromtimestamp(model_file_metadata["timestamp"] / 1e9),
+                processed_at=datetime.fromtimestamp(model_file_metadata["timestamp"] / 1e9),
+            )
+            model_metadata = generator.getMetadata()
+            # ------------------------------------------------------
+
+            db.add(db_model_file)
+            
+            db_building.height_meters = float(model_metadata["total_height"])
+            
+            db.commit()
+            db.refresh(db_model_file)
         except Exception:
-            delete_upload(metadata["s3_key"])
+            delete_upload(model_file_metadata["s3_key"])
             raise
         finally:
             os.unlink(tmp_path)
@@ -728,13 +844,16 @@ async def upload_stl(
         "jobId": job_id,
         "status": "processing",
         "message": f"Processing STL file for building {db_building.name}...",
-        "s3Key": metadata["s3_key"],
+        "modelFileS3Key": model_file_metadata["s3_key"],
+        "processS3Key": process_metadata["s3_key"],
     })
 
 @app.post("/api/buildings/{id}/upload/excel", response_model=UploadJobResponse)
 @limiter.limit(settings.rate_limit_uploads)
 async def upload_excel(request: Request, id: UUID, file: UploadFile = File(...), db: Session = Depends(get_db), user: CognitoUser = Depends(get_current_user)):
     """Upload Excel file with stacking plan data"""
+    # TODO: Implement job queue (currently looking into Redis Queue). Will use backend to process in the meantime.
+    
     db_building = db.query(BuildingModel).filter(BuildingModel.id == id).first()
 
     if not db_building:
@@ -761,6 +880,13 @@ async def upload_excel(request: Request, id: UUID, file: UploadFile = File(...),
 
     import uuid
     job_id = str(uuid.uuid4())
+    
+    # TODO move to queue if we implement it
+    try:
+        excel_load_to_db(io.BytesIO(content), id)
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+    # ------------------------------------------------------
 
     return UploadJobResponse(data={
         "jobId": job_id,

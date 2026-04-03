@@ -31,7 +31,7 @@ class Settings(BaseSettings):
 
     # File Validation
     max_file_size_mb: int = 100
-    allowed_file_extensions: list[str] = [".stl", ".glb", ".xlsx"]
+    allowed_file_extensions: list[str] = [".stl", ".glb", ".xlsx", ".json"]
 
     # Application Configuration
     environment: str = "development"  # development, staging, production

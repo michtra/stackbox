@@ -5,6 +5,8 @@ import json
 import pytest
 from uuid import UUID
 
+from test_values import TEST_BUILDING_ID
+
 # add the parent directory to the path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'src')))
 
@@ -23,9 +25,6 @@ skip_no_s3 = pytest.mark.skipif(not S3_AVAILABLE, reason="AWS S3 credentials not
 # Only import file_storage if S3 is available (it creates a client at module level)
 if S3_AVAILABLE:
     from utilities.file_storage import save_upload, save_processed_json, list_files, get_file_url
-
-TEST_BUILDING_ID = UUID("00000000-0000-0000-0000-0000000000ff")
-
 
 @skip_no_s3
 def test_s3_upload_and_download():

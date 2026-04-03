@@ -18,3 +18,7 @@ uploads/
 
 # Certs or keys
 *.pem
+
+# test stuff
+test/output/*
+.pytest_cache/

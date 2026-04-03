@@ -2,16 +2,21 @@ import io
 import json
 from typing import Union
 from uuid import uuid4, UUID
-from datetime import datetime
-
+from datetime import datetime, timezone
+from fastapi import Depends
 import pandas as pd
+from colorsys import yiq_to_rgb
+import math
+from sqlalchemy.orm import Session
+import distinctipy
 
-from utilities.floorplan import FloorGenerator
+from utilities.floor_plan import FloorGenerator
 from utilities.file_storage import save_processed_json
+from db_models import TenantModel, FloorModel, OccupancyModel
+from database import get_db
 
-
-def excelLoader(filepath: Union[str, io.BytesIO], isBuildingOnly=False) -> dict:
-    """Parse a stacking plan Excel file and convert to the StackingPlan JSON schema.
+def excel_loader(filepath: Union[str, io.BytesIO], isBuildingOnly=False) -> dict:
+    """(Deprecated) Parse a stacking plan Excel file and convert to the StackingPlan JSON schema.
 
     Expects an Excel file with two sheets:
       - 'Summary': building metadata (address, floor count, SF per floor)
@@ -48,7 +53,7 @@ def excelLoader(filepath: Union[str, io.BytesIO], isBuildingOnly=False) -> dict:
         net_rentable_sf = float(summary.iloc[row_idx, 4])
         floor_sf_map[floor_num] = net_rentable_sf
 
-    now = datetime.utcnow().isoformat()
+    now = datetime.now(timezone.utc).isoformat()
     building_id = str(uuid4())
 
     building = {
@@ -168,9 +173,134 @@ def excelLoader(filepath: Union[str, io.BytesIO], isBuildingOnly=False) -> dict:
 
     return stacking_plan
 
+def excel_load_to_db(filepath: Union[str, io.BytesIO], building_id: UUID) -> dict:
+    """Parse a stacking plan Excel file and load data into DB.
 
-def stackplanLoader(filepath, floors, building_id: UUID):
-    """Processes a 3D model file and saves extracted floor coordinates as JSON.
+    Expects an Excel file with two sheets:
+      - 'Summary': building metadata (address, floor count, SF per floor)
+      - 'Rent Roll': tenant occupancy data (floor, tenant, SF, lease dates)
+
+    Args:
+        filepath: Path to the .xlsx file or a BytesIO object.
+        building_id: Building UUID.
+
+    Returns:
+        Dict matching the StackingPlan schema with building, tenants, floors, geometries.
+    """
+    try:
+        gen = get_db()
+        db = next(gen)
+    except Exception:
+        raise
+
+    try:
+        xls = pd.ExcelFile(filepath)
+
+        # --- Parse Summary sheet ---
+        summary = pd.read_excel(xls, sheet_name="Summary", header=None)
+
+        # Building metadata from fixed positions in the Summary sheet
+        total_floors = int(summary.iloc[2, 1])
+
+        # Floor details from Summary: rows 2..2+total_floors, columns 3 (floor #) and 4 (SF)
+        db_floor_map: dict[int, FloorModel] = {}
+        for i in range(total_floors):
+            row_idx = 2 + i  # starts at row index 2
+            floor_num = int(summary.iloc[row_idx, 3])
+            net_rentable_sf = float(summary.iloc[row_idx, 4])
+
+            db_floor_map[floor_num] = FloorModel(
+                building_id=building_id,
+                floor_number=floor_num,
+                label=f"Floor {floor_num}",
+                square_feet=net_rentable_sf,
+            )
+
+        db.add_all(db_floor_map.values())
+        db.flush()
+
+        now_dt = datetime.now(timezone.utc)
+
+        # --- Parse Rent Roll sheet ---
+        rent_roll = pd.read_excel(xls, sheet_name="Rent Roll", header=None)
+
+        # Data rows start at index 3 (rows 0-2 are headers)
+        data_rows = rent_roll.iloc[3:].reset_index(drop=True)
+
+        # Build unique tenants and collect occupancy rows
+        tenant_set: set[str] = set()
+        db_occupancy_rows: list[tuple[OccupancyModel, str]] = []
+
+        for _, row in data_rows.iterrows():
+            floor_num = int(row.iloc[0])
+            room_num = str(row.iloc[1]).strip()
+            tenant_name = str(row.iloc[2]).strip()
+            sf = float(row.iloc[3]) if pd.notna(row.iloc[3]) else None
+            base_rent = float(row.iloc[4]) if pd.notna(row.iloc[4]) else None
+            lease_type = str(row.iloc[5]).strip()
+            lease_start = row.iloc[6]
+            lease_end = row.iloc[7]
+
+            # Create tenant if not seen before
+            tenant_set.add(tenant_name)
+
+            # Normalize dates
+            lease_start_dt = None
+            lease_end_dt = None
+            if pd.notna(lease_start):
+                lease_start_dt = pd.Timestamp(lease_start).to_pydatetime()
+            if pd.notna(lease_end):
+                lease_end_dt = pd.Timestamp(lease_end).to_pydatetime()
+            
+            db_occupancy_rows.append((
+                OccupancyModel(
+                    floor_id=db_floor_map[floor_num].id,
+                    room_num=room_num,
+                    square_feet=sf,
+                    base_rent=base_rent,
+                    lease_type=lease_type,
+                    lease_start=lease_start_dt,
+                    lease_end=lease_end_dt,
+                ),
+                tenant_name
+            ))
+        
+        colors = distinctipy.get_colors(len(tenant_set))
+        colors = ["#{:02X}{:02X}{:02X}".format(*[int(val * 255) for val in color]) for color in colors]
+        
+        # Just so that I can add tenants in bulk
+        db_tenant_map: dict[str, TenantModel] = {}  # tenant_name -> TenantModel
+        
+        for i, tenant_name in enumerate(tenant_set):
+            db_tenant_map[tenant_name] = TenantModel(
+                name=tenant_name,
+                color=colors[i],
+                created_at=now_dt,
+                updated_at=now_dt,
+            )
+        
+        db.add_all(db_tenant_map.values())
+        db.flush()
+        
+        # Converting list of OccupancyModel and tenant_name tuples to list of OccupancyModels
+        for db_occupancy, tenant_name in db_occupancy_rows:
+            db_occupancy.tenant_id = db_tenant_map[tenant_name].id
+        db_occupancy_rows: list[OccupancyModel] = [db_occupancy for db_occupancy, _ in db_occupancy_rows]
+        
+        db.add_all(db_occupancy_rows)
+        db.flush()
+        
+        db.commit()
+    except Exception:
+        raise
+    finally:
+        try:
+            next(gen)
+        except StopIteration:
+            pass
+
+def stackplan_loader(filepath, floors, building_id: UUID):
+    """(Deprecated) Processes a 3D model file and saves extracted floor coordinates as JSON.
 
     Args:
         filepath: Path to the 3D model file.

@@ -122,7 +122,9 @@ class Geometry(BaseModel):
 class Occupancy(BaseModel):
     """Tenant occupancy on a floor"""
     tenantId: UUID
+    roomNumber: Optional[str] = None
     squareFeet: Optional[float] = None
+    baseRent: Optional[float] = None
     leaseStart: Optional[datetime] = None
     leaseEnd: Optional[datetime] = None
 
@@ -150,7 +152,6 @@ class Floor(BaseModel):
     floorNumber: int
     label: Optional[str] = None
     squareFeet: Optional[float] = None
-    geometry: Optional[UUID] = None
     occupancies: List[Occupancy] = Field(default_factory=list)
 
 
@@ -165,7 +166,7 @@ class StackingPlan(BaseModel):
     building: Building
     tenants: List[Tenant]
     floors: List[Floor]
-    geometries: List[Geometry]
+    geometries: List[List[List[List[float]]]]
 
 
 class TenantOccupancyInfo(BaseModel):

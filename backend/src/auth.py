@@ -2,6 +2,8 @@
 import logging
 from functools import lru_cache
 from typing import Optional
+from uuid import UUID, uuid4
+from sqlalchemy.orm import Session
 
 import httpx
 from fastapi import Depends, HTTPException, status
@@ -10,12 +12,15 @@ from jose import JWTError, jwt
 from pydantic import BaseModel
 
 from config import settings
+from database import get_db
+from db_models import UserModel
 
 logger = logging.getLogger(__name__)
 bearer_scheme = HTTPBearer(auto_error=False)
 
 
 class CognitoUser(BaseModel):
+    id: UUID
     sub: str
     email: Optional[str] = None
     name: Optional[str] = None
@@ -88,8 +93,9 @@ def _build_cognito_user(claims: dict) -> CognitoUser:
 
 def get_current_user(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(bearer_scheme),
+    db: Session = Depends(get_db)
 ) -> CognitoUser:
-    """FastAPI dependency — validates Bearer token, returns the Cognito user."""
+    """FastAPI dependency — validates Bearer token, returns the Cognito user. Creates user in DB."""
     if not credentials:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -102,6 +108,7 @@ def get_current_user(
 
 def get_optional_user(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(bearer_scheme),
+    db: Session = Depends(get_db)
 ) -> Optional[CognitoUser]:
     """Like get_current_user but returns None instead of 401 when no token is present."""
     if not credentials:

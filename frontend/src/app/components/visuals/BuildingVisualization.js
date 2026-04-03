@@ -28,8 +28,8 @@ export default function BuildingVisualization({ stackingData, isDarkMode = false
         mapRef.current = new mapboxgl.Map({
             container: mapContainerRef.current,
             center: [
-                stackingData["building"]["location"]["longitude"]["parsedValue"],
-                stackingData["building"]["location"]["latitude"]["parsedValue"]
+                stackingData["building"]["location"]["longitude"],
+                stackingData["building"]["location"]["latitude"]
             ],
             zoom: 17,
             pitch: 60,

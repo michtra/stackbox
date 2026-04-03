@@ -1,26 +1,41 @@
 "use client"
 
-import { useRouter } from "next/navigation";
-import { useRef, useState } from "react";
-import clsx from "clsx";
+import { useParams } from "next/navigation";
+import { useEffect, useState } from "react";
+import { CircularProgress } from "@mui/material";
 
 import BuildingVisualization from "@/app/components/visuals/BuildingVisualization";
 import BuildingInformation from "@/app/components/information/BuildingInformation";
 import ResizableWindows from "@/app/components/ui/ResizableWindows";
 import ThemeToggle from "@/app/components/ui/ThemeToggle";
-
-import stacking from '../../../../test/stacking.json';
+import { getBuilding } from "@/app/utilities/endpoints";
 
 export default function Page() {
-    const router = useRouter();
+    const params = useParams();
+
     const [isDarkMode, setIsDarkMode] = useState(false);
+    const [stacking, setStacking] = useState();
+
+    useEffect(() => {
+        getBuilding(params.slug).then((val) => {
+            if (val.building && val.tenants && val.floors && val.geometries) {
+                setStacking(val);
+            }
+        });
+    }, [params.slug]);
 
     return (
         <div className="relative w-full min-h-screen overflow-hidden">
-            <ResizableWindows>
-                <BuildingVisualization stackingData={stacking} isDarkMode={isDarkMode} />
-                <BuildingInformation stackingData={stacking} isDarkMode={isDarkMode} />
-            </ResizableWindows>
+            {
+                stacking ?
+                <ResizableWindows>
+                    <BuildingVisualization stackingData={stacking} isDarkMode={isDarkMode} />
+                    <BuildingInformation stackingData={stacking} isDarkMode={isDarkMode} />
+                </ResizableWindows> :
+                <div className="w-full h-screen flex flex-col justify-center items-center">
+                    <CircularProgress size="3rem" />
+                </div>
+            }
             <div className="absolute left-4 bottom-4">
                 <ThemeToggle setIsDarkMode={setIsDarkMode} />
             </div>

@@ -6,7 +6,7 @@ from uuid import UUID
 from fastapi import APIRouter, File, UploadFile, HTTPException, Query, status
 
 from utilities.file_storage import save_upload, delete_upload
-from utilities.fileloader import excelLoader, stackplanLoader
+from utilities.file_loader import excel_loader, stackplan_loader
 
 router = APIRouter()
 
@@ -48,14 +48,14 @@ async def upload_context_file(
             tmp_path = tmp.name
 
         try:
-            stackplanLoader(tmp_path, floors, building_id)
+            stackplan_loader(tmp_path, floors, building_id)
         except Exception:
             delete_upload(metadata["s3_key"])
             raise
         finally:
             os.unlink(tmp_path)
     elif type == "xlsx":
-        result = excelLoader(io.BytesIO(content))
+        result = excel_loader(io.BytesIO(content))
         return {
             "detail": f"{file.filename} uploaded and parsed successfully.",
             "file": metadata,
@@ -67,24 +67,4 @@ async def upload_context_file(
     return {
         "detail": f"{file.filename} uploaded successfully.",
         "file": metadata,
-    }
-
-
-@router.post("/api/buildings/metadata", status_code=status.HTTP_200_OK)
-async def get_building_metadata(file: UploadFile = File(...)):
-    """Gets building metadata (building data only) for setup and adjustments."""
-    
-    if not file.filename or not file.filename.endswith('.xlsx'):
-        raise HTTPException(
-            status_code = status.HTTP_400_BAD_REQUEST,
-            detail = "Invalid file type. Only Excel (.xlsx) files are accepted"
-        )
-
-    content = await file.read()
-    file.file.close()
-    
-    result = excelLoader(io.BytesIO(content), isBuildingOnly=True)
-    return {
-        "detail": f"{file.filename} metadata parsed successfully.",
-        "data": result,
     }
