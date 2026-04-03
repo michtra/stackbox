@@ -1,10 +1,14 @@
 import clsx from "clsx";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export default function NumberInput({ value, onChange, increment, min, max, isValid }) {
     const [isError, setIsError] = useState(false);
     const [errorInfo, setErrorInfo] = useState("");
     const [displayValue, setDisplayValue] = useState(value);
+
+    useEffect(() => {
+        setDisplayValue(value);
+    }, [value]);
 
     return (
         <div className="flex flex-col gap-2">
