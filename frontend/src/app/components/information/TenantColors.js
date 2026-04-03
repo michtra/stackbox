@@ -118,7 +118,7 @@ export default function TenantColors({ stackingData }) {
             <h2 className="text-2xl font-semibold mb-2">Tenant Colors</h2>
             <p className="text-black/75 dark:text-white/75 mb-6">Choose a color for each tenant. Colors must use #RRGGBB format.</p>
             <div className="overflow-x-auto">
-                <table className="w-full min-w-[640px] border-collapse">
+                <table className="w-full min-w-160 border-collapse">
                     <thead>
                         <tr className="border-b border-black/10 dark:border-white/20">
                             <th className="text-left py-3">Tenant</th>
