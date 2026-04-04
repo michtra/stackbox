@@ -410,4 +410,73 @@ function meterToLatLng(meter, lat) {
     }
 }
 
-export { proportionBuilding, propertyListingToGeoJSONFeatures, loadAdjustmentsBuildingMesh, meterToLatLng };
+
+/**
+ * Converts stackingData into rental data and statistics used across the information tabs.
+ * @param {Object} stackingData - JSON endpoint output from data of a singular building. 
+ * @returns 
+ */
+function getRentalData(stackingData) {
+    let totalOccupiedSF = 0;
+    let rentalIncome = 0;
+    let weightedTotalLeaseTerm = 0;
+    let rentRoll = [];
+    const tenantNames = {};
+    const now = new Date();
+
+    stackingData.tenants.forEach((tenant) => {
+        tenantNames[tenant.id] = tenant.name;
+    });
+
+    stackingData.floors.forEach((floor) => {
+        floor.occupancies.forEach((occupancy) => {
+            const leaseStart = new Date(occupancy.leaseStart);
+            const leaseEnd = new Date(occupancy.leaseEnd);
+            if (leaseStart <= now <= leaseEnd) {
+                
+                // Calculating months until lease end, takes fractional months into account
+                let leaseLeftMonths = 0;
+                const daysInCurrMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+                if (leaseEnd.getFullYear() !== now.getFullYear() || leaseEnd.getMonth() !== now.getMonth()) {
+                    const daysInLeaseEndMonth = new Date(leaseEnd.getFullYear(), leaseEnd.getMonth() + 1, 0).getDate();
+                    const monthFractionCurrMonth = (daysInCurrMonth - now.getDate()) / daysInCurrMonth;
+                    const monthFractionLeaseEndMonth = (leaseEnd.getDate() - daysInLeaseEndMonth) / daysInLeaseEndMonth;
+                    leaseLeftMonths = ((leaseEnd.getFullYear() - now.getFullYear()) * 12) + (leaseEnd.getMonth() - now.getMonth()) + monthFractionLeaseEndMonth + monthFractionCurrMonth;
+                }
+                else {
+                    leaseLeftMonths = (leaseEnd.getDate() - now.getDate()) / daysInCurrMonth;
+                }
+
+                // Calculating weighted total lease term, later divided by total occupied SF
+                weightedTotalLeaseTerm += leaseLeftMonths * occupancy.squareFeet;
+
+                totalOccupiedSF += occupancy.squareFeet;
+                rentalIncome += occupancy.baseRent;
+
+                rentRoll.push({
+                    "id": occupancy.id,
+                    "floorNumber": floor.floorNumber,
+                    "roomNumber": occupancy.roomNumber,
+                    "tenantId": occupancy.tenantId,
+                    "tenantName": tenantNames[occupancy.tenantId],
+                    "leaseType": occupancy.leaseType,
+                    "leaseStart": leaseStart,
+                    "leaseEnd": leaseEnd,
+                    "leaseLeftMonths": leaseLeftMonths,
+                    "squareFeet": occupancy.squareFeet,
+                    "baseRent": occupancy.baseRent,
+                    "psfRent": occupancy.baseRent / occupancy.squareFeet,
+                });
+            }
+        });
+    });
+
+    return {
+        "rentRoll": rentRoll,
+        "totalOccupiedSF": totalOccupiedSF,
+        "rentalIncome": rentalIncome,
+        "walt": totalOccupiedSF === 0 ? 0 : weightedTotalLeaseTerm / totalOccupiedSF,
+    }
+}
+
+export { proportionBuilding, propertyListingToGeoJSONFeatures, loadAdjustmentsBuildingMesh, meterToLatLng, getRentalData };

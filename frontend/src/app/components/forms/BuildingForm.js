@@ -48,7 +48,7 @@ export default function BuildingForm({ srcProps, isDarkMode, mapRef, modelProps 
                     rotation: modelProps.rotation
                 }
             };
-            console.log(metadata)
+            
             // TODO: Cache building metadata somewhere.
             createBuilding(srcProps.modelSrc, srcProps.excelSrc, metadata).then((buildingId) => {
                 if (buildingId) {

@@ -8,7 +8,7 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 from sqlalchemy.orm import Session
 from sqlalchemy import func, select, and_, or_
-from datetime import datetime
+from datetime import datetime, timezone
 import math
 import json
 
@@ -129,10 +129,12 @@ def db_floor_to_pydantic(db_floor: FloorModel) -> Floor:
         squareFeet = cast(float, db_floor.square_feet) if db_floor.square_feet is not None else None,
         occupancies = [
             Occupancy(
+                id = cast(UUID, occ.id),
                 tenantId = cast(UUID, occ.tenant_id),
                 roomNumber = occ.room_num,
                 squareFeet = occ.square_feet,
                 baseRent = occ.base_rent,
+                leaseType = occ.lease_type,
                 leaseStart = cast(datetime, occ.lease_start) if occ.lease_start else None,
                 leaseEnd = cast(datetime, occ.lease_end) if occ.lease_end else None
             ) for occ in db_floor.occupancies
@@ -457,6 +459,61 @@ async def get_tenant(id: UUID, db: Session = Depends(get_db), user: CognitoUser 
         )
     return TenantResponse(data = db_tenant_to_pydantic(db_tenant))
 
+@app.put("/api/buildings/{id}/tenants", response_model=TenantListResponse)
+async def update_building_tenants(id: UUID, tenants: List[TenantUpdate], db: Session = Depends(get_db), user: CognitoUser = Depends(get_current_user)):
+    """Update tenants for a specific building"""
+    building_query = select(BuildingModel) \
+                        .where(BuildingModel.id == id) \
+                        .order_by(BuildingModel.updated_at.desc())
+    building: BuildingModel = db.execute(building_query).scalars().first()
+
+    if not building:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Building not found"
+        )
+
+    db_tenants_query = select(TenantModel).distinct() \
+                    .join(OccupancyModel, OccupancyModel.tenant_id == TenantModel.id) \
+                    .join(FloorModel, FloorModel.id == OccupancyModel.floor_id) \
+                    .where(FloorModel.building_id == id)
+    db_tenants: list[TenantModel] = db.execute(db_tenants_query).scalars().all()
+    db_tenants_map: dict[UUID, TenantModel] = {}
+    for tenant in db_tenants:
+        db_tenants_map[tenant.id] = tenant
+
+    updated_tenants = []
+    for tenant in tenants:
+        if tenant.id is not None and tenant.id in db_tenants_map:
+            db_tenant = db_tenants_map[tenant.id]
+            if tenant.name is not None:
+                db_tenant.name = tenant.name
+            if tenant.contact is not None:
+                if tenant.contact.email is not None:
+                    db_tenant.contact_email = tenant.contact.email
+                if tenant.contact.phone is not None:
+                    db_tenant.contact_phone = tenant.contact.phone
+            if tenant.color is not None:
+                db_tenant.color = tenant.color
+            setattr(db_tenant, 'updated_at', datetime.now(timezone.utc))
+            updated_tenants.append(db_tenant)
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Tenant with ID {tenant.id} does not exist"
+            )
+
+    try:
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to update tenants: {str(e)}"
+        )
+
+    return TenantListResponse(data=[db_tenant_to_pydantic(t) for t in updated_tenants])
+
 @app.put("/api/tenants/{id}", response_model=TenantResponse)
 async def update_tenant(id: UUID, tenant: TenantUpdate, db: Session = Depends(get_db), user: CognitoUser = Depends(get_current_user)):
     """Update a tenant (partial updates allowed)"""
@@ -476,7 +533,7 @@ async def update_tenant(id: UUID, tenant: TenantUpdate, db: Session = Depends(ge
     if tenant.color is not None:
         db_tenant.color = tenant.color
 
-    setattr(db_tenant, 'updated_at', datetime.utcnow())
+    setattr(db_tenant, 'updated_at', datetime.now(timezone.utc))
     try:
         db.commit()
         db.refresh(db_tenant)
@@ -644,6 +701,78 @@ async def add_occupancy(id: UUID, floorNumber: int, occupancy: OccupancyCreate, 
         )
 
     return FloorResponse(data = db_floor_to_pydantic(db_floor))
+
+@app.put("/api/buildings/{id}/occupancies", response_model=FloorListResponse)
+async def update_building_occupancies(id: UUID, occupancies: List[OccupancyUpdate], db: Session = Depends(get_db), user: CognitoUser = Depends(get_current_user)):
+    """Bulk update occupancies for a building (add/update/remove)"""
+    building_query = select(BuildingModel) \
+                        .where(BuildingModel.id == id) \
+                        .order_by(BuildingModel.updated_at.desc())
+    building: BuildingModel = db.execute(building_query).scalars().first()
+
+    if not building:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Building not found"
+        )
+
+    try:
+        updated_floors: set[FloorModel] = set()
+        for occupancy in occupancies:
+            if occupancy.id is None:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Occupancy ID is required for update"
+                )
+            db_occupancy = db.query(OccupancyModel).filter(
+                OccupancyModel.id == occupancy.id
+            ).first()
+            if not db_occupancy:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"Occupancy with ID {occupancy.id} not found"
+                )
+            if occupancy.tenantId is not None:
+                db_tenant = db.query(TenantModel).filter(TenantModel.id == occupancy.tenantId).first()
+                if not db_tenant:
+                    raise HTTPException(
+                        status_code=status.HTTP_404_NOT_FOUND,
+                        detail=f"Tenant with ID {occupancy.tenantId} not found"
+                    )
+                db_occupancy.tenant_id = occupancy.tenantId
+            if occupancy.floorNumber is not None:
+                db_floor = db.query(FloorModel).filter(
+                    FloorModel.building_id == id,
+                    FloorModel.floor_number == occupancy.floorNumber
+                ).first()
+                if not db_floor:
+                    raise HTTPException(
+                        status_code=status.HTTP_404_NOT_FOUND,
+                        detail=f"Floor {occupancy.floorNumber} not found"
+                    )
+                db_occupancy.floor_id = db_floor.id
+                updated_floors.add(db_floor)
+            
+            if occupancy.squareFeet is not None:
+                db_occupancy.square_feet = occupancy.squareFeet
+            if occupancy.baseRent is not None:
+                db_occupancy.base_rent = occupancy.baseRent
+            if occupancy.leaseStart is not None:
+                db_occupancy.lease_start = occupancy.leaseStart
+            if occupancy.leaseEnd is not None:
+                db_occupancy.lease_end = occupancy.leaseEnd
+            if occupancy.leaseType is not None:
+                db_occupancy.lease_type = occupancy.leaseType
+
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to update occupancies: {str(e)}"
+        )
+
+    return FloorListResponse(data=[db_floor_to_pydantic(f) for f in updated_floors])
 
 @app.put("/api/buildings/{id}/floors/{floorNumber}/occupancies/{tenantId}", response_model=FloorResponse)
 async def update_occupancy(id: UUID, floorNumber: int, tenantId: UUID, occupancy_data: OccupancyUpdate, db: Session = Depends(get_db), user: CognitoUser = Depends(get_current_user)):

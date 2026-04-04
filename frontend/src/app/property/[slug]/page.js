@@ -30,7 +30,7 @@ export default function Page() {
                 stacking ?
                 <ResizableWindows>
                     <BuildingVisualization stackingData={stacking} isDarkMode={isDarkMode} />
-                    <BuildingInformation stackingData={stacking} isDarkMode={isDarkMode} />
+                    <BuildingInformation stackingData={stacking} setStackingData={setStacking} isDarkMode={isDarkMode} />
                 </ResizableWindows> :
                 <div className="w-full h-screen flex flex-col justify-center items-center">
                     <CircularProgress size="3rem" />

@@ -3,6 +3,8 @@
 import { getSession } from "next-auth/react";
 import { meterToLatLng } from "@/app/utilities/processor";
 
+
+
 /** Returns Authorization header if a session with an access token exists. */
 async function authHeaders(isId = false) {
     const session = await getSession();
@@ -195,4 +197,85 @@ async function getBuildingListing(page, limit) {
     }
 }
 
-export { urlToFile, createBuilding, getBuilding, getBuildingListing, getUserCredentials, getBuildingMetadata, isBlobUrlValid };
+async function saveTenantEndpoint(tenantId, changes) {
+    try {
+        var body = {}
+        if (changes.name) body.name = changes.name;
+        if (changes.color) body.color = changes.color;
+
+        const response = await fetch(`${process.env.NEXT_PUBLIC_SERVER_URL}/api/tenants/${tenantId}`, {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json",
+                ...await authHeaders(),
+            },
+            body: JSON.stringify(body),
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(errorText || response.statusText);
+        }
+    }
+    catch (error) {
+        console.error("Error when saving tenant:", error);
+        throw error;
+    }
+}
+
+async function saveTenantAllEndpoint(buildingId, changesByTenantId) {
+    try {
+        const body = Object.entries(changesByTenantId).map(([tenantId, changes]) => {
+            return { id: tenantId, ...changes };
+        });
+
+        const response = await fetch(`${process.env.NEXT_PUBLIC_SERVER_URL}/api/buildings/${buildingId}/tenants`, {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json",
+                ...await authHeaders(),
+            },
+            body: JSON.stringify(body),
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(errorText || response.statusText);
+        }
+    }
+    catch (error) {
+        console.error("Error when saving all tenants:", error);
+        throw error;
+    }
+}
+
+async function saveOccupanciesEndpoint(buildingId, changesByOccupancyId) {
+    try {
+        const body = Object.entries(changesByOccupancyId).map(([occupancyId, changes]) => {
+            return {
+                id: occupancyId,
+                ...changes
+            };
+        });
+
+        const response = await fetch(`${process.env.NEXT_PUBLIC_SERVER_URL}/api/buildings/${buildingId}/occupancies`, {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json",
+                ...await authHeaders(),
+            },
+            body: JSON.stringify(body),
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(errorText || response.statusText);
+        }
+    }
+    catch (error) {
+        console.error("Error when saving occupancies:", error);
+        throw error;
+    }
+}
+
+export { urlToFile, createBuilding, getBuilding, getBuildingListing, getUserCredentials, getBuildingMetadata, isBlobUrlValid, saveTenantEndpoint, saveTenantAllEndpoint, saveOccupanciesEndpoint };

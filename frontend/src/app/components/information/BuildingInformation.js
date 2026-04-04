@@ -1,89 +1,22 @@
 "use client"
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import clsx from "clsx";
 import { Menu, MenuItem } from "@mui/material";
 import { KeyboardArrowDown } from "@mui/icons-material";
 
 import BuildingStatistics from "@/app/components/information/BuildingStatistics";
 import BuildingComposition from "@/app/components/information/BuildingComposition";
-import TenantColors from "@/app/components/information/TenantColors";
+import BuildingEdit from "@/app/components/information/BuildingEdit";
+import { getRentalData } from "@/app/utilities/processor";
 
-/**
- * 
- * @param {Object} stackingData - JSON endpoint output from data of a singular building. 
- * @returns 
- */
-function getRentalData(stackingData) {
-    let totalOccupiedSF = 0;
-    let rentalIncome = 0;
-    let weightedTotalLeaseTerm = 0;
-    let rentRoll = [];
-    const tenantNames = {};
-    const now = new Date();
-
-    stackingData.tenants.forEach((tenant) => {
-        tenantNames[tenant.id] = tenant.name;
-    });
-
-    stackingData.floors.forEach((floor) => {
-        floor.occupancies.forEach((occupancy) => {
-            const leaseStart = new Date(occupancy.leaseStart);
-            const leaseEnd = new Date(occupancy.leaseEnd);
-            if (leaseStart <= now <= leaseEnd) {
-                
-                // Calculating months until lease end, takes fractional months into account
-                let leaseLeftMonths = 0;
-                const daysInCurrMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-                if (leaseEnd.getFullYear() !== now.getFullYear() || leaseEnd.getMonth() !== now.getMonth()) {
-                    const daysInLeaseEndMonth = new Date(leaseEnd.getFullYear(), leaseEnd.getMonth() + 1, 0).getDate();
-                    const monthFractionCurrMonth = (daysInCurrMonth - now.getDate()) / daysInCurrMonth;
-                    const monthFractionLeaseEndMonth = (leaseEnd.getDate() - daysInLeaseEndMonth) / daysInLeaseEndMonth;
-                    leaseLeftMonths = ((leaseEnd.getFullYear() - now.getFullYear()) * 12) + (leaseEnd.getMonth() - now.getMonth()) + monthFractionLeaseEndMonth + monthFractionCurrMonth;
-                }
-                else {
-                    leaseLeftMonths = (leaseEnd.getDate() - now.getDate()) / daysInCurrMonth;
-                }
-
-                // Calculating weighted total lease term, later divided by total occupied SF
-                weightedTotalLeaseTerm += leaseLeftMonths * occupancy.squareFeet;
-
-                totalOccupiedSF += occupancy.squareFeet;
-                rentalIncome += occupancy.baseRent;
-
-                rentRoll.push({
-                    "id": `${floor.floorNumber}-${occupancy.roomNumber}-${occupancy.tenantId}`,
-                    "floor": floor.floorNumber,
-                    "roomNumber": occupancy.roomNumber,
-                    "tenantId": occupancy.tenantId,
-                    "tenantName": tenantNames[occupancy.tenantId],
-                    "leaseType": occupancy.leaseType,
-                    "leaseStart": leaseStart,
-                    "leaseEnd": leaseEnd,
-                    "leaseLeftMonths": leaseLeftMonths,
-                    "squareFeet": occupancy.squareFeet,
-                    "baseRent": occupancy.baseRent,
-                    "psfRent": occupancy.baseRent / occupancy.squareFeet,
-                });
-            }
-        });
-    });
-
-    return {
-        "rentRoll": rentRoll,
-        "totalOccupiedSF": totalOccupiedSF,
-        "rentalIncome": rentalIncome,
-        "walt": totalOccupiedSF === 0 ? 0 : weightedTotalLeaseTerm / totalOccupiedSF,
-    }
-}
-
-export default function BuildingInformation({ stackingData, isDarkMode }) {
+export default function BuildingInformation({ stackingData, setStackingData, isDarkMode }) {
     const [selectedTab, setSelectedTab] = useState("Statistics and Assumptions");
     const [timeUnit, setTimeUnit] = useState("Month");
     const [anchorEl, setAnchorEl] = useState(null);
-    const isTabMenuOpen = Boolean(anchorEl);
+    const [rentalData, setRentalData] = useState(getRentalData(stackingData));
 
-    const rentalData = getRentalData(stackingData);
+    const isTabMenuOpen = Boolean(anchorEl);
 
     return (
         <div className="w-full h-full flex flex-col overflow-hidden">
@@ -96,7 +29,7 @@ export default function BuildingInformation({ stackingData, isDarkMode }) {
                 <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] px-8 gap-4 max-w-160">
                     <div>
                         <button
-                            className="flex flex-row justify-center items-center h-10 px-4 border rounded-lg transition-all"
+                            className="flex flex-row justify-between items-center w-full max-w-72 h-10 px-4 border rounded-lg transition-all"
                             id="tab-button"
                             aria-controls={isTabMenuOpen ? "tab-menu" : undefined}
                             aria-haspopup={true}
@@ -137,11 +70,11 @@ export default function BuildingInformation({ stackingData, isDarkMode }) {
                             </MenuItem>
                             <MenuItem
                                 onClick={() => {
-                                    setSelectedTab("Tenant Colors");
+                                    setSelectedTab("Edit");
                                     setAnchorEl(null);
                                 }}
                             >
-                                Tenant Colors
+                                Edit
                             </MenuItem>
                         </Menu>
                     </div>
@@ -167,8 +100,8 @@ export default function BuildingInformation({ stackingData, isDarkMode }) {
                     {selectedTab === "Tenant Composition" && (
                         <BuildingComposition stackingData={stackingData} isDarkMode={isDarkMode} timeUnit={timeUnit} rentalData={rentalData} />
                     )}
-                    {selectedTab === "Tenant Colors" && (
-                        <TenantColors stackingData={stackingData} />
+                    {selectedTab === "Edit" && (
+                        <BuildingEdit stackingData={stackingData} setStackingData={setStackingData} isDarkMode={isDarkMode} rentalData={rentalData} setRentalData={setRentalData} />
                     )}
                 </div>
             </div>

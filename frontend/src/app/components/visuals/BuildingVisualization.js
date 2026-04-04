@@ -1,6 +1,6 @@
 "use client"
 
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useMemo } from "react";
 import mapboxgl from "mapbox-gl";
 
 import { proportionBuilding } from "@/app/utilities/processor";
@@ -17,7 +17,7 @@ import { proportionBuilding } from "@/app/utilities/processor";
 export default function BuildingVisualization({ stackingData, isDarkMode = false }) {
     const mapRef = useRef();
     const mapContainerRef = useRef();
-    const floorData = proportionBuilding(stackingData);
+    var floorData = proportionBuilding(stackingData);
 
     const showInfo = (e) => {
         console.log("Click!", e);
@@ -39,6 +39,28 @@ export default function BuildingVisualization({ stackingData, isDarkMode = false
 
         return () => mapRef.current.remove();
     }, []);
+
+    useEffect(() => {
+        if (mapRef.current?.getSource("stackingplan")) {
+            floorData.data.features = floorData.data.features.map((feature) => {
+                return {
+                    ...feature,
+                    properties: {
+                        ...feature.properties,
+                        color: stackingData.tenants.find((tenant) => tenant.id === feature.properties.tenant)?.color || "#ffffff"
+                    }
+                }
+            });
+            mapRef.current.getSource("stackingplan")?.setData(floorData?.data);
+        }
+    }, [stackingData?.tenants]);
+
+    useEffect(() => {
+        if (mapRef.current?.getSource("stackingplan")) {
+            floorData = proportionBuilding(stackingData);
+            mapRef.current.getSource("stackingplan")?.setData(floorData?.data);
+        }
+    }, [stackingData?.floors]);
 
     useEffect(() => {
         mapRef.current.setStyle(isDarkMode ? "mapbox://styles/mapbox/dark-v11" : "mapbox://styles/mapbox/light-v11");

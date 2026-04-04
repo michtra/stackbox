@@ -86,6 +86,7 @@ class TenantCreate(BaseModel):
 
 class TenantUpdate(BaseModel):
     """Model for updating a tenant (partial update allowed)"""
+    id: UUID = None # ID is required for multiple tenant update
     name: Optional[str] = None
     contact: Optional[Contact] = None
     color: Optional[HexColor] = None
@@ -121,10 +122,12 @@ class Geometry(BaseModel):
 
 class Occupancy(BaseModel):
     """Tenant occupancy on a floor"""
+    id: UUID
     tenantId: UUID
     roomNumber: Optional[str] = None
     squareFeet: Optional[float] = None
     baseRent: Optional[float] = None
+    leaseType: Optional[str] = None
     leaseStart: Optional[datetime] = None
     leaseEnd: Optional[datetime] = None
 
@@ -132,14 +135,23 @@ class Occupancy(BaseModel):
 class OccupancyCreate(BaseModel):
     """Model for creating a new occupancy"""
     tenantId: UUID
+    roomNumber: Optional[str] = None
     squareFeet: Optional[float] = None
+    baseRent: Optional[float] = None
+    leaseType: Optional[str] = None
     leaseStart: Optional[datetime] = None
     leaseEnd: Optional[datetime] = None
 
 
 class OccupancyUpdate(BaseModel):
     """Model for updating an occupancy (partial update allowed)"""
+    id: UUID
+    tenantId: Optional[UUID] = None
+    floorNumber: Optional[int] = None
+    roomNumber: Optional[str] = None
     squareFeet: Optional[float] = None
+    baseRent: Optional[float] = None
+    leaseType: Optional[str] = None
     leaseStart: Optional[datetime] = None
     leaseEnd: Optional[datetime] = None
 
