@@ -36,7 +36,7 @@ export default function Page() {
         <div className="relative w-full min-h-screen overflow-hidden">
             {
                 propertyListingData ?
-                <ResizableWindows>
+                <ResizableWindows isDarkMode={isDarkMode}>
                     <ListingVisualization propertyListingData={propertyListingData} isDarkMode={isDarkMode} mapRef={mapRef} />
                     <PropertyListing propertyListingData={propertyListingData} mapRef={mapRef} paginationProps={paginationProps} />
                 </ResizableWindows> :

@@ -58,7 +58,7 @@ export default function Page() {
 
     return (        
         <div className="relative w-full min-h-screen overflow-hidden">
-            <ResizableWindows>
+            <ResizableWindows isDarkMode={isDarkMode}>
                 <BuildingAdjustments
                     srcProps={srcProps}
                     isDarkMode={isDarkMode}

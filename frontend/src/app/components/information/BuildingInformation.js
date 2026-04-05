@@ -10,7 +10,7 @@ import BuildingComposition from "@/app/components/information/BuildingCompositio
 import BuildingEdit from "@/app/components/information/BuildingEdit";
 import { getRentalData } from "@/app/utilities/processor";
 
-export default function BuildingInformation({ stackingData, setStackingData, isDarkMode }) {
+export default function BuildingInformation({ stackingData, setStackingData, isDarkMode = false, visualizationProps }) {
     const [selectedTab, setSelectedTab] = useState("Statistics and Assumptions");
     const [timeUnit, setTimeUnit] = useState("Month");
     const [anchorEl, setAnchorEl] = useState(null);
@@ -95,13 +95,13 @@ export default function BuildingInformation({ stackingData, setStackingData, isD
                 </div>
                 <div className="w-full flex-1 overflow-y-scroll px-2 pb-8 md:px-0">
                     {selectedTab === "Statistics and Assumptions" && (
-                        <BuildingStatistics stackingData={stackingData} isDarkMode={isDarkMode} timeUnit={timeUnit} rentalData={rentalData} />
+                        <BuildingStatistics stackingData={stackingData} isDarkMode={isDarkMode} timeUnit={timeUnit} rentalData={rentalData} visualizationProps={visualizationProps} />
                     )}
                     {selectedTab === "Tenant Composition" && (
-                        <BuildingComposition stackingData={stackingData} isDarkMode={isDarkMode} timeUnit={timeUnit} rentalData={rentalData} />
+                        <BuildingComposition stackingData={stackingData} isDarkMode={isDarkMode} timeUnit={timeUnit} rentalData={rentalData} visualizationProps={visualizationProps} />
                     )}
                     {selectedTab === "Edit" && (
-                        <BuildingEdit stackingData={stackingData} setStackingData={setStackingData} isDarkMode={isDarkMode} rentalData={rentalData} setRentalData={setRentalData} />
+                        <BuildingEdit stackingData={stackingData} setStackingData={setStackingData} isDarkMode={isDarkMode} rentalData={rentalData} setRentalData={setRentalData} visualizationProps={visualizationProps} />
                     )}
                 </div>
             </div>

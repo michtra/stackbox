@@ -3,8 +3,6 @@
 import { getSession } from "next-auth/react";
 import { meterToLatLng } from "@/app/utilities/processor";
 
-
-
 /** Returns Authorization header if a session with an access token exists. */
 async function authHeaders(isId = false) {
     const session = await getSession();
@@ -271,6 +269,8 @@ async function saveOccupanciesEndpoint(buildingId, changesByOccupancyId) {
             const errorText = await response.text();
             throw new Error(errorText || response.statusText);
         }
+
+        return response;
     }
     catch (error) {
         console.error("Error when saving occupancies:", error);
@@ -278,4 +278,40 @@ async function saveOccupanciesEndpoint(buildingId, changesByOccupancyId) {
     }
 }
 
-export { urlToFile, createBuilding, getBuilding, getBuildingListing, getUserCredentials, getBuildingMetadata, isBlobUrlValid, saveTenantEndpoint, saveTenantAllEndpoint, saveOccupanciesEndpoint };
+async function deleteOccupanciesEndpoint(buildingId, occupancyIdList) {
+    try {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_SERVER_URL}/api/buildings/${buildingId}/occupancies`, {
+            method: "DELETE",
+            headers: {
+                "Content-Type": "application/json",
+                ...await authHeaders(),
+            },
+            body: JSON.stringify(occupancyIdList),
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(errorText || response.statusText);
+        }
+
+        return response;
+    }
+    catch (error) {
+        console.error("Error when deleting occupancies:", error);
+        throw error;
+    }
+}
+
+export {
+    urlToFile,
+    createBuilding,
+    getBuilding,
+    getBuildingListing,
+    getUserCredentials,
+    getBuildingMetadata,
+    isBlobUrlValid,
+    saveTenantEndpoint,
+    saveTenantAllEndpoint,
+    saveOccupanciesEndpoint,
+    deleteOccupanciesEndpoint
+};

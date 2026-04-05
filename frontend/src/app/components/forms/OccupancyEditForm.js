@@ -9,11 +9,10 @@ import DialogContent from '@mui/material/DialogContent';
 import DialogContentText from '@mui/material/DialogContentText';
 import DialogTitle from '@mui/material/DialogTitle';
 
-import { saveOccupanciesEndpoint } from "@/app/utilities/endpoints";
+import { deleteOccupanciesEndpoint, saveOccupanciesEndpoint } from "@/app/utilities/endpoints";
 import { getRentalData } from "@/app/utilities/processor";
 
-export default function OccupancyEditForm({ stackingData, setStackingData, isDarkMode, rentalData, setRentalData }) {
-    // TODO: Add ability to add/delete occupancies
+export default function OccupancyEditForm({ stackingData, setStackingData, isDarkMode = false, rentalData, setRentalData, visualizationProps }) {
 
     const [rentRoll, setRentRoll] = useState(rentalData.rentRoll);
     const [saveState, setSaveState] = useState({ status: "", message: "" });
@@ -25,19 +24,6 @@ export default function OccupancyEditForm({ stackingData, setStackingData, isDar
 
     const newOccupancyList = useRef([]);
 
-    console.log(rentalData)
-
-    const theme = useMemo(() => 
-        createTheme({
-            palette: {
-                mode: isDarkMode ? "dark" : "light",
-                DataGrid: {
-                    bg: isDarkMode ? "#0f172b" : "#ffffff",
-                }
-            },
-        }),
-    [isDarkMode]);
-
     async function saveOccupancies() {
         setSaveState({ status: "saving", message: "Saving..." });
         try {
@@ -46,8 +32,15 @@ export default function OccupancyEditForm({ stackingData, setStackingData, isDar
                 return;
             }
 
+            const changedFloors = new Set();
+
             const changesByOccupancyId = Object.fromEntries(
                 Object.entries(editedRentalDataMap).map(([occupancyId, changes]) => {
+                    if ("floorNumber" in changes) {
+                        changedFloors.add(changes["floorNumber"].originalValue);
+                        changedFloors.add(changes["floorNumber"].value);
+                    }
+
                     return [
                         occupancyId,
                         Object.fromEntries(
@@ -67,10 +60,17 @@ export default function OccupancyEditForm({ stackingData, setStackingData, isDar
                         .filter((occupancy) => {
                             const notMoved = !(occupancy.id in changesByOccupancyId) || changesByOccupancyId[occupancy.id].floorNumber === floor.floorNumber
                             if (!notMoved) {
-                                movedStackingData[changesByOccupancyId[occupancy.id].floorNumber] = {
+                                const newOccupancyData = {
                                     ...occupancy,
                                     ...changesByOccupancyId[occupancy.id],
                                 };
+                    
+                                if (changesByOccupancyId[occupancy.id].floorNumber in movedStackingData) {
+                                    movedStackingData[changesByOccupancyId[occupancy.id].floorNumber].push(newOccupancyData);
+                                }
+                                else {
+                                    movedStackingData[changesByOccupancyId[occupancy.id].floorNumber] = [newOccupancyData];
+                                }
                             }
                             return notMoved
                         })
@@ -88,7 +88,7 @@ export default function OccupancyEditForm({ stackingData, setStackingData, isDar
                 floor.floorNumber in movedStackingData ?
                 {
                     ...floor,
-                    occupancies: [...floor.occupancies, movedStackingData[floor.floorNumber]],
+                    occupancies: [...floor.occupancies, ...movedStackingData[floor.floorNumber]],
                 } :
                 floor
             );
@@ -109,10 +109,13 @@ export default function OccupancyEditForm({ stackingData, setStackingData, isDar
             }
 
             await saveOccupanciesEndpoint(stackingData.building.id, changesByOccupancyId)
-
-            setRentalData(getRentalData(newStackingData));
+            
+            const newRentalData = getRentalData(newStackingData);
+            setRentalData(newRentalData);
+            setRentRoll(newRentalData.rentRoll);
             setStackingData(newStackingData);
             setEditedRentalDataMap({});
+            visualizationProps.setRerenderFloors(changedFloors);
             setSaveState({ status: "success", message: "Saved." });
         }
         catch (error) {
@@ -121,9 +124,49 @@ export default function OccupancyEditForm({ stackingData, setStackingData, isDar
     }
 
     async function deleteOccupancies() {
-        setSaveState({ status: "saving", message: "Deleting..." });
-        console.log(rowSelectionModel);
-        setSaveState({ status: "success", message: "Deleted." });
+        try {
+            if (!(rowSelectionModel?.ids?.size)) {
+                setSaveState({ status: "error", message: "No occupancies to delete." });
+            }
+
+            setSaveState({ status: "saving", message: "Deleting..." });
+
+            await deleteOccupanciesEndpoint(stackingData.building.id, [...rowSelectionModel.ids])
+
+            const changedFloors = new Set()
+
+            const newStackingData = {
+                ...stackingData,
+                floors: stackingData.floors.map((floor) => ({
+                    ...floor,
+                    occupancies: floor.occupancies
+                    .filter((occupancy) => {
+                        const isDeleted = rowSelectionModel.ids.has(occupancy.id)
+                        if (isDeleted) {
+                            changedFloors.add(floor.floorNumber);
+                        }
+                        return !isDeleted
+                    })
+                }))
+            }
+            const newRentalData = getRentalData(newStackingData);
+            setRentalData(newRentalData);
+            setRentRoll(newRentalData.rentRoll);
+            setStackingData(newStackingData);
+            visualizationProps.setRerenderFloors(changedFloors);
+            setRowSelectionModel((prev) => {
+                return {...prev, ids: new Set()}
+            })
+            setSaveState({ status: "success", message: "Deleted." });
+        }
+        catch (error) {
+            setSaveState({ status: "error", message: `Failed to save changes: ${error.message}` });
+        }
+
+    }
+
+    async function addOccupancy() {
+
     }
 
     const rentRollCols = [
@@ -233,40 +276,38 @@ export default function OccupancyEditForm({ stackingData, setStackingData, isDar
                 <h2 className="text-2xl font-semibold mb-2">Occupancy</h2>
                 <p className="text-black/75 dark:text-white/75 mb-6">Edit each leases.</p>
             </div>
-            <ThemeProvider theme={theme}>
-                <DataGrid
-                    className="mx-8 px-4 max-h-[65vh]"
-                    rows={rentRoll}
-                    columns={rentRollCols}
-                    initialState={{ pagination: { page: 0, pageSize: 50 } }}
-                    pageSizeOptions={[50, 100, 200, 500]}
-                    checkboxSelection
-                    disableRowSelectionOnClick
-                    processRowUpdate={(newRow, oldRow) => {
-                        setEditedRentalDataMap((prev) => ({
-                            ...prev,
-                            [newRow.id]: {
-                                ...editedRentalDataMap[newRow.id],
-                                ...Object.fromEntries(
-                                    Object.entries(newRow).filter(([key, value]) => {
-                                        return value !== oldRow[key];
-                                    }).map(([key, value]) => {
-                                        return [key, {
-                                            value: value,
-                                            originalValue: prev[newRow.id]?.[key]?.originalValue || oldRow[key],
-                                        }]
-                                    })
-                                ),
-                            }
-                        }));
+            <DataGrid
+                className="mx-8 px-4 max-h-[65vh]"
+                rows={rentRoll}
+                columns={rentRollCols}
+                initialState={{ pagination: { page: 0, pageSize: 50 } }}
+                pageSizeOptions={[50, 100, 200, 500]}
+                checkboxSelection
+                disableRowSelectionOnClick
+                processRowUpdate={(newRow, oldRow) => {
+                    setEditedRentalDataMap((prev) => ({
+                        ...prev,
+                        [newRow.id]: {
+                            ...editedRentalDataMap[newRow.id],
+                            ...Object.fromEntries(
+                                Object.entries(newRow).filter(([key, value]) => {
+                                    return value !== oldRow[key];
+                                }).map(([key, value]) => {
+                                    return [key, {
+                                        value: value,
+                                        originalValue: prev[newRow.id]?.[key]?.originalValue || oldRow[key],
+                                    }]
+                                })
+                            ),
+                        }
+                    }));
 
-                        return newRow;
-                    }}
-                    onRowSelectionModelChange={(model) => {
-                        setRowSelectionModel(model);
-                    }}
-                />
-            </ThemeProvider>
+                    return newRow;
+                }}
+                onRowSelectionModelChange={(model) => {
+                    setRowSelectionModel(model);
+                }}
+            />
             <div className="flex flex-col items-center gap-2 px-8 py-4">
                 <div className="flex flex-row justify-between w-full gap-3">
                     <div className="flex flex-row gap-3">
@@ -274,21 +315,21 @@ export default function OccupancyEditForm({ stackingData, setStackingData, isDar
                             type="button"
                             className="h-10 px-4 border rounded-lg hover:bg-red-500 hover:text-white transition-all disabled:bg-transparent disabled:text-black/50 dark:disabled:bg-transparent dark:disabled:text-white/50 disabled:cursor-not-allowed"
                             onClick={() => setIsDeleteConfirmationOpen(true)}
-                            disabled={saveState?.status === "saving"}
+                            disabled={saveState?.status === "saving" || !rowSelectionModel?.ids?.size}
                         >
                             Delete
                         </button>
                         <Dialog
                             open={isDeleteConfirmationOpen}
                             onClose={() => setIsDeleteConfirmationOpen(false)}
-                            aria-labelledby="alert-dialog-title"
-                            aria-describedby="alert-dialog-description"
+                            aria-labelledby="delete-alert-dialog-title"
+                            aria-describedby="delete-alert-dialog-description"
                         >
-                            <DialogTitle id="alert-dialog-title">
+                            <DialogTitle id="delete-alert-dialog-title">
                                 Delete?
                             </DialogTitle>
                             <DialogContent>
-                                <DialogContentText id="alert-dialog-description">
+                                <DialogContentText id="delete-alert-dialog-description">
                                     Are you sure you want to delete the selected occupancies? This action cannot be undone.
                                 </DialogContentText>
                             </DialogContent>

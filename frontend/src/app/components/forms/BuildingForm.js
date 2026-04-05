@@ -14,7 +14,7 @@ import { createBuilding, getBuildingMetadata } from "@/app/utilities/endpoints";
 import NumberInput from "@/app/components/ui/NumberInput";
 import { loadAdjustmentsBuildingMesh } from "@/app/utilities/processor";
 
-export default function BuildingForm({ srcProps, isDarkMode, mapRef, modelProps }) {
+export default function BuildingForm({ srcProps, isDarkMode = false, mapRef, modelProps }) {
     // TODO: Google Maps Platform Place Autocomplete integration.
     const router = useRouter();
     const autofill = useAddressAutofillCore({

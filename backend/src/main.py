@@ -7,7 +7,7 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 from sqlalchemy.orm import Session
-from sqlalchemy import func, select, and_, or_
+from sqlalchemy import func, select, and_, or_, delete
 from datetime import datetime, timezone
 import math
 import json
@@ -703,7 +703,7 @@ async def add_occupancy(id: UUID, floorNumber: int, occupancy: OccupancyCreate, 
     return FloorResponse(data = db_floor_to_pydantic(db_floor))
 
 @app.put("/api/buildings/{id}/occupancies", response_model=FloorListResponse)
-async def update_building_occupancies(id: UUID, occupancies: List[OccupancyUpdate], db: Session = Depends(get_db), user: CognitoUser = Depends(get_current_user)):
+async def update_occupancy_multiple(id: UUID, occupancies: List[OccupancyUpdate], db: Session = Depends(get_db), user: CognitoUser = Depends(get_current_user)):
     """Bulk update occupancies for a building (add/update/remove)"""
     building_query = select(BuildingModel) \
                         .where(BuildingModel.id == id) \
@@ -826,6 +826,44 @@ async def update_occupancy(id: UUID, floorNumber: int, tenantId: UUID, occupancy
         )
 
     return FloorResponse(data=db_floor_to_pydantic(db_floor))
+
+@app.delete("/api/buildings/{id}/occupancies", status_code=204)
+async def remove_occupancy_multiple(id: UUID, occupancyIds: List[UUID], db: Session = Depends(get_db), user: CognitoUser = Depends(get_current_user)):
+    """
+    Remove multiple occupancies.
+    Building ID is to prevent altering different buildings.
+    """
+    building_query = select(BuildingModel) \
+                        .where(BuildingModel.id == id) \
+                        .order_by(BuildingModel.updated_at.desc())
+    building: BuildingModel = db.execute(building_query).scalars().first()
+
+    if not building:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Building not found"
+        )
+    try:
+        occupancies_sub_query = select(OccupancyModel.id) \
+                            .join(FloorModel, FloorModel.id == OccupancyModel.floor_id) \
+                            .where(
+                                and_(
+                                    FloorModel.building_id == building.id,
+                                    OccupancyModel.id.in_(occupancyIds)
+                                )
+                            ) \
+                            .scalar_subquery()
+        
+        occupancies_query = delete(OccupancyModel).where(OccupancyModel.id.in_(occupancies_sub_query))
+        db.execute(occupancies_query)
+
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to update occupancies: {str(e)}"
+        )
 
 @app.delete("/api/buildings/{id}/floors/{floorNumber}/occupancies/{tenantId}", status_code=204)
 async def remove_occupancy(id: UUID, floorNumber: int, tenantId: UUID, db: Session = Depends(get_db), user: CognitoUser = Depends(get_current_user)):

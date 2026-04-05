@@ -5,7 +5,7 @@ import mapboxgl from "mapbox-gl";
 
 import { loadAdjustmentsBuildingMesh } from "@/app/utilities/processor";
 
-export default function BuildingAdjustments({ srcProps, isDarkMode, mapRef, modelProps }) {
+export default function BuildingAdjustments({ srcProps, isDarkMode = false, mapRef, modelProps }) {
     const mapContainerRef = useRef();
 
     useEffect(() => {

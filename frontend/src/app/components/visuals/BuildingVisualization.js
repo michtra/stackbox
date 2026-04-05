@@ -14,7 +14,7 @@ import { proportionBuilding } from "@/app/utilities/processor";
  * @param {BuildingVisualizationProps} props
  * @returns {JSX.Element}
  */
-export default function BuildingVisualization({ stackingData, isDarkMode = false }) {
+export default function BuildingVisualization({ stackingData, isDarkMode = false, visualizationProps }) {
     const mapRef = useRef();
     const mapContainerRef = useRef();
     var floorData = proportionBuilding(stackingData);
@@ -35,49 +35,114 @@ export default function BuildingVisualization({ stackingData, isDarkMode = false
             pitch: 60,
         });
 
-        mapRef.current.on("click", "stackingplan-layer", (e) => showInfo(e));
-
         return () => mapRef.current.remove();
     }, []);
 
     useEffect(() => {
-        if (mapRef.current?.getSource("stackingplan")) {
-            floorData.data.features = floorData.data.features.map((feature) => {
-                return {
-                    ...feature,
-                    properties: {
-                        ...feature.properties,
-                        color: stackingData.tenants.find((tenant) => tenant.id === feature.properties.tenant)?.color || "#ffffff"
-                    }
-                }
-            });
-            mapRef.current.getSource("stackingplan")?.setData(floorData?.data);
+        for (const key of Object.keys(floorData)) {
+            if (mapRef.current?.getSource(`${key}-floorplan`)) {
+                mapRef.current.getSource(`${key}-floorplan`)?.setData(floorData[key]?.data);
+            }
         }
     }, [stackingData?.tenants]);
 
     useEffect(() => {
-        if (mapRef.current?.getSource("stackingplan")) {
-            floorData = proportionBuilding(stackingData);
-            mapRef.current.getSource("stackingplan")?.setData(floorData?.data);
+        floorData = proportionBuilding(stackingData);
+
+        if (mapRef.current.isStyleLoaded()) {
+            const unloadSourceList = Object.keys(mapRef.current?.getStyle().sources).filter((sourceKey) => visualizationProps.rerenderFloors.has(parseInt(sourceKey.split("_")[0], 10)))
+            const loadKeyList = Object.keys(floorData).filter((key) => visualizationProps.rerenderFloors.has(parseInt(key.split("_")[0], 10)))
+
+            unloadSourceList.forEach((sourceKey) => {
+                if (mapRef.current?.getLayer(`${sourceKey}-layer`)) {
+                    mapRef.current.removeLayer(`${sourceKey}-layer`);
+                }
+                if (mapRef.current?.getSource(sourceKey)) {
+                    mapRef.current.removeSource(sourceKey);
+                }
+            });
+
+            loadKeyList.forEach((key) => {
+                if (!(mapRef.current?.getSource(`${key}-floorplan`))) {
+                    mapRef.current.addSource(`${key}-floorplan`, floorData[key]);
+                    mapRef.current.addLayer({
+                        "id": `${key}-floorplan-layer`,
+                        "type": "fill-extrusion",
+                        "source": `${key}-floorplan`,
+                        "paint": {
+                            "fill-extrusion-color": ["get", "color"],
+                            "fill-extrusion-height": ["get", "height"],
+                            "fill-extrusion-base": ["get", "base_height"],
+                            "fill-extrusion-opacity": (
+                                visualizationProps.selectedFloors.length === 0 || visualizationProps.selectedFloors.includes(parseInt(key.split("_")[0], 10)) ?
+                                1.0 :
+                                0.25
+                            ),
+                        }
+                    });
+                }
+            })
         }
-    }, [stackingData?.floors]);
+    }, [visualizationProps.rerenderFloors]);
+
+    useEffect(() => {
+        if (mapRef.current.isStyleLoaded()) {
+            Object.keys(mapRef.current?.getStyle().sources).forEach((sourceKey) => {
+                if (mapRef.current?.getLayer(`${sourceKey}-layer`)) {
+                    const newOpacity = (
+                        visualizationProps.selectedFloors.length === 0 || visualizationProps.selectedFloors.includes(parseInt(sourceKey.split("_")[0], 10)) ?
+                        1.0 :
+                        0.25
+                    )
+                    if (mapRef.current.getPaintProperty(`${sourceKey}-layer`, "fill-extrusion-opacity") !== newOpacity) {
+                        mapRef.current.setPaintProperty(`${sourceKey}-layer`, "fill-extrusion-opacity", newOpacity);
+                    }
+                }
+            });
+        }
+    }, [visualizationProps.selectedFloors]);
 
     useEffect(() => {
         mapRef.current.setStyle(isDarkMode ? "mapbox://styles/mapbox/dark-v11" : "mapbox://styles/mapbox/light-v11");
         mapRef.current.on("style.load", () => {
-            if (!mapRef.current.getSource("stackingplan")) {
-                mapRef.current.addSource("stackingplan", floorData);
-                mapRef.current.addLayer({
-                    "id": "stackingplan-layer",
-                    "type": "fill-extrusion",
-                    "source": "stackingplan",
-                    "paint": {
-                        "fill-extrusion-color": ["get", "color"],
-                        "fill-extrusion-height": ["get", "height"],
-                        "fill-extrusion-base": ["get", "base_height"],
-                        "fill-extrusion-opacity": 1
+            for (const key of Object.keys(floorData)) {
+                floorData[key].data.features = floorData[key].data.features.map((feature) => {
+                    return {
+                        ...feature,
+                        properties: {
+                            ...feature.properties,
+                            color: feature.properties.tenant === "Vacancy" || feature.properties.tenant === "Plate" ?
+                                    (
+                                        isDarkMode ?
+                                        (feature.properties.tenant !== "Plate" ? "#fffae6" : "#141725") :
+                                        "#ffffff"
+                                    ) :
+                                    feature.properties.color
+                        }
                     }
                 });
+
+                if (!mapRef.current.getSource(`${key}-floorplan`)) {
+                    mapRef.current.addSource(`${key}-floorplan`, floorData[key]);
+                    mapRef.current.addLayer({
+                        "id": `${key}-floorplan-layer`,
+                        "type": "fill-extrusion",
+                        "source": `${key}-floorplan`,
+                        "paint": {
+                            "fill-extrusion-color": ["get", "color"],
+                            "fill-extrusion-height": ["get", "height"],
+                            "fill-extrusion-base": ["get", "base_height"],
+                            "fill-extrusion-opacity": (
+                                visualizationProps.selectedFloors.length === 0 || visualizationProps.selectedFloors.includes(parseInt(key.split("_")[0], 10)) ?
+                                1.0 :
+                                0.25
+                            ),
+                        }
+                    });
+                }
+                else if (key.includes("Vacancy") || key.includes("Plate")) {
+                    mapRef.current.getSource(`${key}-floorplan`)?.setData(floorData[key]?.data);
+                }
             }
         });
     }, [isDarkMode]);

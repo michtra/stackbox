@@ -1,29 +1,17 @@
 "use client"
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { DataGrid } from "@mui/x-data-grid";
-import { createTheme, ThemeProvider } from "@mui/material";
 
 import FloorOccupancyChart from "@/app/components/charts/FloorOccupancyChart";
 import ChartExportButton from "@/app/components/charts/ChartExportButton";
 
-export default function BuildingComposition({ stackingData, isDarkMode, timeUnit, rentalData }) {
+export default function BuildingComposition({ stackingData, isDarkMode = false, timeUnit, rentalData, visualizationProps }) {
     const floorChartRef = useRef(null);
     const [rentRoll, setRentRoll] = useState(rentalData.rentRoll);
 
     const leaseLeftYearsList = rentalData.rentRoll.map((row) => row.leaseLeftMonths / 12);
     const baseRentYearList = rentalData.rentRoll.map((row) => row.baseRent * 12);
-
-    const theme = useMemo(() => 
-        createTheme({
-            palette: {
-                mode: isDarkMode ? "dark" : "light",
-                DataGrid: {
-                    bg: isDarkMode ? "#0f172b" : "#ffffff",
-                }
-            },
-        }),
-    [isDarkMode]);
 
     const rentRollCols = [
         {
@@ -116,19 +104,17 @@ export default function BuildingComposition({ stackingData, isDarkMode, timeUnit
                         </ChartExportButton>
                     </div>
                     <div className="mt-4">
-                        <FloorOccupancyChart stackingData={stackingData} isDarkMode={isDarkMode} />
+                        <FloorOccupancyChart stackingData={stackingData} isDarkMode={isDarkMode} visualizationProps={visualizationProps} />
                     </div>
                 </div>
             </div>
-            <ThemeProvider theme={theme}>
-                <DataGrid
-                    className="mx-8 px-4 max-h-[65vh]"
-                    rows={rentRoll}
-                    columns={rentRollCols}
-                    initialState={{ pagination: { page: 0, pageSize: 50 } }}
-                    pageSizeOptions={[50, 100, 200, 500]}
-                />
-            </ThemeProvider>
+            <DataGrid
+                className="mx-8 px-4 max-h-[65vh]"
+                rows={rentRoll}
+                columns={rentRollCols}
+                initialState={{ pagination: { page: 0, pageSize: 50 } }}
+                pageSizeOptions={[50, 100, 200, 500]}
+            />
         </div>
     );
 }

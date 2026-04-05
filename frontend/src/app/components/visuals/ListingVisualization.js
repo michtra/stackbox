@@ -26,7 +26,7 @@ export default function ListingVisualization({ className, propertyListingData, m
 
     const spinGlobe = () => {
         const zoom = mapRef.current.getZoom();
-        if (zoom < 4) {
+        if (zoom < 3) {
             const center = mapRef.current.getCenter();
             center.lng-=2;
             // Ease to animation for spinning globe

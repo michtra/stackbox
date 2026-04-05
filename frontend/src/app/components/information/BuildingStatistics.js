@@ -5,7 +5,7 @@ import { useRef } from "react";
 import OccupancyPieChart from "@/app/components/charts/OccupancyPieChart";
 import ChartExportButton from '../../components/charts/ChartExportButton';
 
-export default function BuildingStatistics({ stackingData, isDarkMode, timeUnit, rentalData }) {
+export default function BuildingStatistics({ stackingData, isDarkMode = false, timeUnit, rentalData }) {
     const pieChartRef = useRef(null);
 
     return (
