@@ -5,7 +5,7 @@ import { useRef } from "react";
 import OccupancyPieChart from "@/app/components/charts/OccupancyPieChart";
 import ChartExportButton from '../../components/charts/ChartExportButton';
 
-export default function BuildingStatistics({ stackingData, isDarkMode = false, timeUnit, rentalData }) {
+export default function BuildingStatistics({ stackingData, isDarkMode = false, timeUnit, rentalData, visualizationProps }) {
     const pieChartRef = useRef(null);
 
     return (
@@ -56,7 +56,7 @@ export default function BuildingStatistics({ stackingData, isDarkMode = false, t
                         </ChartExportButton>
                     </div>
                     <div className="flex-1 flex items-center justify-center">
-                        <OccupancyPieChart stackingData={stackingData} isDarkMode={isDarkMode} />
+                        <OccupancyPieChart stackingData={stackingData} isDarkMode={isDarkMode} visualizationProps={visualizationProps} />
                     </div>
                 </div>
             </div>

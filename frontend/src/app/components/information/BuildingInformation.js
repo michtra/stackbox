@@ -18,6 +18,12 @@ export default function BuildingInformation({ stackingData, setStackingData, isD
 
     const isTabMenuOpen = Boolean(anchorEl);
 
+    useEffect(() => {
+        visualizationProps.setSelectedFloors([]);
+        visualizationProps.setSelectedTenants([]);
+        visualizationProps.setSelectedLayers([]);
+    }, [selectedTab]);
+
     return (
         <div className="w-full h-full flex flex-col overflow-hidden">
             <div className="w-full flex-1 min-h-0 flex flex-col gap-6">

@@ -29,8 +29,8 @@ export default function BuildingForm({ srcProps, isDarkMode = false, mapRef, mod
     const [buildingMetadata, setBuildingMetadata] = useState();
 
     const isInputValidRefs = {
-        isLatValidRef: useRef(true),
-        isLngValidRef: useRef(true),
+        lat: useRef(true),
+        lng: useRef(true),
     }
 
     const handleSubmit = async () => {
@@ -304,7 +304,7 @@ export default function BuildingForm({ srcProps, isDarkMode = false, mapRef, mod
                     increment={0.0001}
                     min={-90}
                     max={90}
-                    isValid={isInputValidRefs.isLatValidRef}
+                    isValid={isInputValidRefs.lat}
                     onChange={(val) => {
                         modelProps.setCoordLat(val);
                         modelProps.modelRef.current.setCoords([modelProps.coordLng, val]);
@@ -319,7 +319,7 @@ export default function BuildingForm({ srcProps, isDarkMode = false, mapRef, mod
                     increment={0.0001}
                     min={-180}
                     max={180}
-                    isValid={isInputValidRefs.isLngValidRef}
+                    isValid={isInputValidRefs.lng}
                     onChange={(val) => {
                         modelProps.setCoordLng(val);
                         modelProps.modelRef.current.setCoords([val, modelProps.coordLat]);

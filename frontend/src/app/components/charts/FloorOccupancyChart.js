@@ -10,6 +10,7 @@ import {
     Tooltip,
     Legend
 } from 'chart.js';
+import { useEffect, useState } from 'react';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
@@ -81,7 +82,7 @@ function buildFloorOccupancyData(stackingData, floorNumbers) {
                 ([key, ds]) => ds.data.some(v => v > 0)
             )
         ),
-        "vacant": vacancyDataset
+        "Vacancy": vacancyDataset
     }).map(([key, ds]) => {return {id: key, ...ds, data: ds.data.reverse(), sf: ds.sf.reverse()}});
 
     return {
@@ -93,6 +94,9 @@ function buildFloorOccupancyData(stackingData, floorNumbers) {
 export default function FloorOccupancyChart({ stackingData, title = 'Floor-by-Floor Occupancy', isDarkMode = false, visualizationProps }) {
     const floorNumbers = stackingData.floors.map((floor) => floor.floorNumber).reverse()
     const data = buildFloorOccupancyData(stackingData, floorNumbers);
+    const tenantIds = data.datasets.map((tenant) => tenant.id);
+
+    const [visibleTenants, setVisibleTenants] = useState([...tenantIds, "Plate"]);
 
     const options = {
         responsive: true,
@@ -114,6 +118,21 @@ export default function FloorOccupancyChart({ stackingData, title = 'Floor-by-Fl
                     color: isDarkMode ? '#e2e8f0' : '#1f2937',
                     boxWidth: 12,
                     boxHeight: 12
+                },
+                onClick: (e, legendItem, legend) => {
+                    const newVisibleTenants = [...visibleTenants];
+                    setVisibleTenants(newVisibleTenants);
+                    visualizationProps.setSelectedTenants(newVisibleTenants);
+                    const index = legendItem.datasetIndex;
+                    if (legend.chart.isDatasetVisible(legendItem.datasetIndex)) {
+                        legend.chart.hide(legendItem.datasetIndex);
+                        legendItem.hidden = true;
+                        newVisibleTenants.splice(newVisibleTenants.indexOf(tenantIds[legendItem.datasetIndex]), 1);
+                    } else {
+                        legend.chart.show(legendItem.datasetIndex);
+                        legendItem.hidden = false;
+                        newVisibleTenants.push(tenantIds[legendItem.datasetIndex]);
+                    };
                 }
             },
             title: {

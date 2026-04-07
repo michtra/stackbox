@@ -686,8 +686,14 @@ async def add_occupancy(id: UUID, floorNumber: int, occupancy: OccupancyCreate, 
         tenant_id = occupancy.tenantId,
         square_feet = occupancy.squareFeet,
         lease_start = occupancy.leaseStart,
-        lease_end = occupancy.leaseEnd
+        lease_end = occupancy.leaseEnd,
+        base_rent = occupancy.baseRent
     )
+    
+    if occupancy.roomNumber:
+        db_occupancy.room_num = occupancy.roomNumber
+    if occupancy.leaseType:
+        db_occupancy.lease_type = occupancy.leaseType
 
     try:
         db.add(db_occupancy)

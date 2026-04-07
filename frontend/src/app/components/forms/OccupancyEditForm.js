@@ -1,36 +1,289 @@
 "use client"
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { DataGrid, GridEditInputCell } from "@mui/x-data-grid";
-import { createTheme, ThemeProvider } from "@mui/material";
-import Dialog from '@mui/material/Dialog';
-import DialogActions from '@mui/material/DialogActions';
-import DialogContent from '@mui/material/DialogContent';
-import DialogContentText from '@mui/material/DialogContentText';
-import DialogTitle from '@mui/material/DialogTitle';
+import { MenuItem, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Select } from "@mui/material";
+import { DateField, LocalizationProvider } from "@mui/x-date-pickers";
+import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 
-import { deleteOccupanciesEndpoint, saveOccupanciesEndpoint } from "@/app/utilities/endpoints";
+import { addOccupancyEndpoint, deleteOccupanciesEndpoint, saveOccupanciesEndpoint } from "@/app/utilities/endpoints";
 import { getRentalData } from "@/app/utilities/processor";
+import NumberInput from "@/app/components/ui/NumberInput";
+
+function AddOccupancyForm({ stackingData, formData, setFormData, tenantValueOptions, leaseTypeValueOptions, isInputValidRefs }) {
+    const [squareFootRefreshToggle, setSquareFootRefreshToggle] = useState(false);
+
+    const floorSFRemainingMap = Object.fromEntries(stackingData?.floors?.map((floor) => {
+        return [
+            floor.floorNumber,
+            (
+                floor.occupancies ?
+                floor.occupancies.reduce((acc, occupancy) => {
+                    return acc - occupancy.squareFeet;
+                }, floor.squareFeet) :
+                floor.squareFeet
+            )
+        ]
+    }));
+
+    return (
+        <div className="grid grid-cols-2 gap-4">
+            <div className="flex flex-col gap-2">
+                <span>Floor</span>
+                <NumberInput
+                    value={formData.floorNumber ?? ""}
+                    min={1}
+                    max={stackingData?.building?.metadata.totalFloors || 0}
+                    isValid={isInputValidRefs.floorNumber}
+                    isIntOnly={true}
+                    showIncrementButton={false}
+                    onChange={(val) => {
+                        setFormData((prev) => {
+                            return {
+                                ...prev,
+                                "floorNumber": val
+                            };
+                        });
+                        setSquareFootRefreshToggle(!squareFootRefreshToggle)
+                    }}
+                />
+            </div>
+            <div className="flex flex-col gap-2">
+                <span>Room Number</span>
+                <input
+                    value={formData.roomNumber ?? ""}
+                    onChange={(e) => {
+                        setFormData((prev) => {
+                            return {
+                                ...prev,
+                                "roomNumber": e.target.value
+                            };
+                        });
+                        isInputValidRefs.roomNumber.current = Boolean(e.target.value?.length);
+                    }}
+                    className="flex flex-row px-4 py-2 gap-2 justify-between items-center outline rounded-sm focus-within:outline-blue-500 focus-within:outline-2"
+                />
+            </div>
+            <div className="flex flex-col gap-2">
+                <span>Lease Type</span>
+                <Select
+                    labelId="tenant-select-label"
+                    id="tenant-select"
+                    value={formData.leaseType}
+                    onChange={(e) => {
+                        setFormData((prev) => {
+                            return {
+                                ...prev,
+                                "leaseType": e.target.value
+                            };
+                        });
+                        isInputValidRefs.leaseType.current = Boolean(e.target.value?.length);
+                    }}
+                >
+                    {leaseTypeValueOptions.map((leaseType) => <MenuItem value={leaseType}>{leaseType}</MenuItem>)}
+                </Select>
+            </div>
+            <div className="flex flex-col gap-2">
+                <span>Tenant</span>
+                <Select
+                    labelId="tenant-select-label"
+                    id="tenant-select"
+                    value={formData.tenantId}
+                    onChange={(e) => {
+                        setFormData((prev) => {
+                            return {
+                                ...prev,
+                                "tenantId": e.target.value
+                            };
+                        });
+                        isInputValidRefs.tenantId.current = Boolean(e.target.value?.length);
+                    }}
+                >
+                    {tenantValueOptions.map((tenant) => <MenuItem value={tenant.value}>{tenant.label}</MenuItem>)}
+                    <MenuItem value="new">New Tenant</MenuItem>
+                </Select>
+            </div>
+            {
+                formData.tenantId === "new" &&
+                <div className="grid grid-cols-2 gap-4 col-span-2">
+                    <div className="flex flex-col gap-2">
+                        <span>New Tenant Name</span>
+                        <input
+                            value={formData.newTenantName ?? ""}
+                            onChange={(e) => {
+                                setFormData((prev) => {
+                                    return {
+                                        ...prev,
+                                        "newTenantName": e.target.value
+                                    };
+                                });
+                                isInputValidRefs.newTenantName.current = Boolean(e.target.value?.length);
+                            }}
+                            className="flex flex-row px-4 py-2 gap-2 justify-between items-center outline rounded-sm focus-within:outline-blue-500 focus-within:outline-2"
+                        />
+                    </div>
+                    <div className="flex flex-col gap-2">
+                        <span>New Tenant Color</span>
+                        <input
+                            value={formData.newTenantColor ?? ""}
+                            onChange={(e) => {
+                                setFormData((prev) => {
+                                    return {
+                                        ...prev,
+                                        "newTenantColor": e.target.value
+                                    };
+                                });
+                                isInputValidRefs.newTenantColor.current = Boolean(e.target.value?.length);
+                            }}
+                            className="flex flex-row px-4 py-2 gap-2 justify-between items-center outline rounded-sm focus-within:outline-blue-500 focus-within:outline-2"
+                        />
+                    </div>
+                    <div className="flex flex-col gap-2">
+                        <span>New Tenant Email</span>
+                        <input
+                            value={formData.newTenantContactEmail ?? ""}
+                            onChange={(e) => {
+                                setFormData((prev) => {
+                                    return {
+                                        ...prev,
+                                        "newTenantContactEmail": e.target.value
+                                    };
+                                });
+                                isInputValidRefs.newTenantContactEmail.current = Boolean(e.target.value?.length);
+                            }}
+                            className="flex flex-row px-4 py-2 gap-2 justify-between items-center outline rounded-sm focus-within:outline-blue-500 focus-within:outline-2"
+                        />
+                    </div>
+                    <div className="flex flex-col gap-2">
+                        <span>New Tenant Phone</span>
+                        <input
+                            value={formData.newTenantContactPhone ?? ""}
+                            onChange={(e) => {
+                                setFormData((prev) => {
+                                    return {
+                                        ...prev,
+                                        "newTenantContactPhone": e.target.value
+                                    };
+                                });
+                                isInputValidRefs.newTenantContactPhone.current = Boolean(e.target.value?.length);
+                            }}
+                            className="flex flex-row px-4 py-2 gap-2 justify-between items-center outline rounded-sm focus-within:outline-blue-500 focus-within:outline-2"
+                        />
+                    </div>
+                </div>
+            }
+            <LocalizationProvider dateAdapter={AdapterDayjs}>
+                <div className="grid grid-cols-2 gap-4 col-span-2">
+                    <div className="flex flex-col gap-2">
+                        <span>Lease Start</span>
+                        <DateField
+                            value={formData.leaseStart}
+                            onChange={(val) => {
+                                setFormData((prev) => {
+                                    return {
+                                        ...prev,
+                                        "leaseStart": val
+                                    };
+                                });
+                                isInputValidRefs.leaseStart.current = val?.isValid();
+                            }}
+                        />
+                    </div>
+                    <div className="flex flex-col gap-2">
+                        <span>Lease End</span>
+                        <DateField
+                            value={formData.leaseEnd}
+                            onChange={(val) => {
+                                setFormData((prev) => {
+                                    return {
+                                        ...prev,
+                                        "leaseEnd": val
+                                    };
+                                });
+                                isInputValidRefs.leaseEnd.current = val?.isValid();
+                            }}
+                        />
+                    </div>
+                </div>
+            </LocalizationProvider>
+            <div className="flex flex-col gap-2">
+                <span>Square Feet</span>
+                <NumberInput
+                    value={formData.squareFeet ?? ""}
+                    min={0}
+                    max={floorSFRemainingMap[formData.floorNumber] || 0}
+                    isValid={isInputValidRefs.squareFeet}
+                    showIncrementButton={false}
+                    refreshToggle={squareFootRefreshToggle}
+                    onChange={(val) => {
+                        setFormData((prev) => {
+                            return {
+                                ...prev,
+                                "squareFeet": val
+                            };
+                        });
+                    }}
+                />
+            </div>
+            <div className="flex flex-col gap-2">
+                <span>Base Rent (USD)</span>
+                <NumberInput
+                    value={formData.baseRent ?? ""}
+                    min={0}
+                    isValid={isInputValidRefs.baseRent}
+                    showIncrementButton={false}
+                    onChange={(val) => {
+                        setFormData((prev) => {
+                            return {
+                                ...prev,
+                                "baseRent": val
+                            };
+                        });
+                    }}
+                />
+            </div>
+        </div>
+    );
+}
 
 export default function OccupancyEditForm({ stackingData, setStackingData, isDarkMode = false, rentalData, setRentalData, visualizationProps }) {
 
     const [rentRoll, setRentRoll] = useState(rentalData.rentRoll);
+    const tenantValueOptions = stackingData?.tenants.map((tenant) => {
+        return { value: tenant.id, label: tenant.name };
+    }) || [];
+    const leaseTypeValueOptions = ["Gross", "Modified Gross", "Full-Service", "Single Net", "Double Net", "Triple Net"];
+
+
     const [saveState, setSaveState] = useState({ status: "", message: "" });
+
     const [editedRentalDataMap, setEditedRentalDataMap] = useState({});
+
     const [rowSelectionModel, setRowSelectionModel] = useState([]);
     const [isDeleteConfirmationOpen, setIsDeleteConfirmationOpen] = useState(false);
-    const [isAddFormOpen, setIsAddFormOpen] = useState(false);
-    const [newOccupancyData, setNewOccupancyData] = useState({});
 
-    const newOccupancyList = useRef([]);
+    const defaultNewOccupancyData = {
+        "floorNumber": "",
+        "roomNumber": "",
+        "tenantId": "",
+        "leaseType": "",
+        "leaseStart": null,
+        "leaseEnd": null,
+        "squareFeet": "",
+        "baseRent": "",
+        "newTenantName": "",
+        "newTenantColor": "",
+        "newTenantContactEmail": "",
+        "newTenantContactPhone": "",
+    }
+
+    const [isAddFormOpen, setIsAddFormOpen] = useState(false);
+    const isNewOccupancyInputValidRefs = Object.fromEntries(Object.keys(defaultNewOccupancyData).map((key) => [key, useRef(false)]));
+    const [newOccupancyData, setNewOccupancyData] = useState(defaultNewOccupancyData);
 
     async function saveOccupancies() {
         setSaveState({ status: "saving", message: "Saving..." });
         try {
-            if (!editedRentalDataMap || Object.keys(editedRentalDataMap).length === 0) {
-                setSaveState({ status: "error", message: "No changes to save." });
-                return;
-            }
 
             const changedFloors = new Set();
 
@@ -44,13 +297,21 @@ export default function OccupancyEditForm({ stackingData, setStackingData, isDar
                     return [
                         occupancyId,
                         Object.fromEntries(
-                            Object.entries(changes).map(([key, value]) => {
+                            Object.entries(changes).filter(([key, value]) => {
+                                return value.value !== value.originalValue;
+                            }).map(([key, value]) => {
                                 return [key, value.value];
                             })
                         )
                     ];
                 })
             );
+
+            if (!changesByOccupancyId || !Object.values(changesByOccupancyId).some((val) => Object.values(val).length > 0)) {
+                setSaveState({ status: "error", message: "No changes to save." });
+                return;
+            }
+            
             const movedStackingData = {}
             const newStackingData = {
                 ...stackingData,
@@ -131,9 +392,9 @@ export default function OccupancyEditForm({ stackingData, setStackingData, isDar
 
             setSaveState({ status: "saving", message: "Deleting..." });
 
-            await deleteOccupanciesEndpoint(stackingData.building.id, [...rowSelectionModel.ids])
+            await deleteOccupanciesEndpoint(stackingData.building.id, [...rowSelectionModel.ids]);
 
-            const changedFloors = new Set()
+            const changedFloors = new Set();
 
             const newStackingData = {
                 ...stackingData,
@@ -166,7 +427,39 @@ export default function OccupancyEditForm({ stackingData, setStackingData, isDar
     }
 
     async function addOccupancy() {
+        try {
+            setSaveState({ status: "saving", message: "Adding..." });
 
+            const addOccupancyData = await addOccupancyEndpoint(stackingData.building.id, newOccupancyData);
+
+            const changedFloors = new Set([addOccupancyData.floorData.floorNumber]);
+
+            const newStackingData = {
+                ...stackingData,
+                floors: stackingData.floors.map((floor) => (
+                    floor.floorNumber === addOccupancyData.floorData.floorNumber ? 
+                    {...(addOccupancyData.floorData)} :
+                    {...floor}
+                ))
+            }
+            console.log(addOccupancyData);
+
+            if (addOccupancyData.tenantData) {
+                newStackingData.tenants.push(addOccupancyData.tenantData);
+            }
+
+            const newRentalData = getRentalData(newStackingData);
+            setRentalData(newRentalData);
+            setRentRoll(newRentalData.rentRoll);
+            setStackingData(newStackingData);
+            visualizationProps.setRerenderFloors(changedFloors);
+
+            setSaveState({ status: "success", message: "Added." });
+            setIsAddFormOpen(false);
+        }
+        catch (error) {
+            setSaveState({ status: "error", message: `Failed to save changes: ${error.message}` });
+        }
     }
 
     const rentRollCols = [
@@ -208,9 +501,7 @@ export default function OccupancyEditForm({ stackingData, setStackingData, isDar
             width: 200,
             editable: true,
             type: "singleSelect",
-            valueOptions: stackingData?.tenants.map((tenant) => {
-                return { value: tenant.id, label: tenant.name };
-            }) || []
+            valueOptions: tenantValueOptions,
         },
         {
             field: "leaseType",
@@ -219,7 +510,7 @@ export default function OccupancyEditForm({ stackingData, setStackingData, isDar
             width: 120,
             editable: true,
             type: "singleSelect",
-            valueOptions: ["Gross", "Modified Gross", "Full-Service", "Single Net", "Double Net", "Triple Net"],
+            valueOptions: leaseTypeValueOptions,
         },
         {
             field: "leaseStart",
@@ -322,14 +613,14 @@ export default function OccupancyEditForm({ stackingData, setStackingData, isDar
                         <Dialog
                             open={isDeleteConfirmationOpen}
                             onClose={() => setIsDeleteConfirmationOpen(false)}
-                            aria-labelledby="delete-alert-dialog-title"
-                            aria-describedby="delete-alert-dialog-description"
+                            aria-labelledby="delete-occupancy-alert-dialog-title"
+                            aria-describedby="delete-occupancy-alert-dialog-description"
                         >
-                            <DialogTitle id="delete-alert-dialog-title">
+                            <DialogTitle id="delete-occupancy-alert-dialog-title">
                                 Delete?
                             </DialogTitle>
                             <DialogContent>
-                                <DialogContentText id="delete-alert-dialog-description">
+                                <DialogContentText id="delete-occupancy-alert-dialog-description">
                                     Are you sure you want to delete the selected occupancies? This action cannot be undone.
                                 </DialogContentText>
                             </DialogContent>
@@ -354,11 +645,68 @@ export default function OccupancyEditForm({ stackingData, setStackingData, isDar
                         <button
                             type="button"
                             className="h-10 px-4 border rounded-lg hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-all disabled:bg-transparent disabled:text-black/50 dark:disabled:bg-transparent dark:disabled:text-white/50 disabled:cursor-not-allowed"
-                            onClick={() => saveOccupancies()}
+                            onClick={() => {
+                                setNewOccupancyData(defaultNewOccupancyData);
+                                setIsAddFormOpen(true);
+                            }}
                             disabled={saveState?.status === "saving"}
                         >
                             Add
                         </button>
+                        <Dialog
+                            open={isAddFormOpen}
+                            onClose={() => setIsAddFormOpen(false)}
+                            aria-labelledby="add-occupancy-dialog-title"
+                            aria-describedby="delete-alert-dialog-description"
+                        >
+                            <DialogTitle id="delete-alert-dialog-title">
+                                Add Occupancy
+                            </DialogTitle>
+                            <DialogContent>
+                                <AddOccupancyForm
+                                    stackingData={stackingData}
+                                    tenantValueOptions={tenantValueOptions}
+                                    leaseTypeValueOptions={leaseTypeValueOptions}
+                                    formData={newOccupancyData}
+                                    setFormData={setNewOccupancyData}
+                                    isInputValidRefs={isNewOccupancyInputValidRefs}
+                                />
+                            </DialogContent>
+                            <DialogActions>
+                                <div className="flex flex-row justify-between items-end w-full px-4 pb-3">
+                                    <div>
+                                        {
+                                            saveState?.message && (
+                                            <span className={saveState.status === "error" ? "text-sm text-red-600 dark:text-red-300" : "text-sm text-green-700 dark:text-green-300"}>
+                                                {saveState.message}
+                                            </span>
+                                        )}
+                                    </div>
+                                    <div className="flex flex-row gap-2">
+                                        <button
+                                            className="h-10 px-4 border rounded-lg hover:bg-red-500 hover:text-white transition-all"
+                                            onClick={() => setIsAddFormOpen(false)}
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            className="h-10 px-4 border rounded-lg hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-all"
+                                            onClick={() => {
+                                                console.log(isNewOccupancyInputValidRefs)
+                                                if (Object.entries(isNewOccupancyInputValidRefs).some(([key, val]) => !val.current && !(newOccupancyData.tenantId !== "new" && key.includes("newTenant")) && key !== "newTenantContactEmail" && key !== "newTenantContactPhone")) {
+                                                    setSaveState({ status: "error", message: "Incomplete data." });
+                                                }
+                                                else {
+                                                    addOccupancy();
+                                                }
+                                            }}
+                                        >
+                                            Create
+                                        </button>
+                                    </div>
+                                </div>
+                            </DialogActions>
+                        </Dialog>
                     </div>
                     <button
                         type="button"

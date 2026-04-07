@@ -1,13 +1,15 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react";
-import { DataGrid } from "@mui/x-data-grid";
+import { DataGrid, gridFilteredSortedRowEntriesSelector, gridFilteredSortedRowIdsSelector, useGridApiRef } from "@mui/x-data-grid";
 
 import FloorOccupancyChart from "@/app/components/charts/FloorOccupancyChart";
 import ChartExportButton from "@/app/components/charts/ChartExportButton";
 
 export default function BuildingComposition({ stackingData, isDarkMode = false, timeUnit, rentalData, visualizationProps }) {
     const floorChartRef = useRef(null);
+    const apiRef = useGridApiRef();
+
     const [rentRoll, setRentRoll] = useState(rentalData.rentRoll);
 
     const leaseLeftYearsList = rentalData.rentRoll.map((row) => row.leaseLeftMonths / 12);
@@ -114,6 +116,21 @@ export default function BuildingComposition({ stackingData, isDarkMode = false, 
                 columns={rentRollCols}
                 initialState={{ pagination: { page: 0, pageSize: 50 } }}
                 pageSizeOptions={[50, 100, 200, 500]}
+                apiRef={apiRef}
+                onFilterModelChange={(newModel) => {
+                    setTimeout(() => {
+                        const hasActiveFilters = newModel.items?.some((item) => item.value);
+                        const filteredLayers = (
+                            hasActiveFilters ?
+                            gridFilteredSortedRowEntriesSelector(apiRef).map((occupancy) => {
+                                return `${occupancy.model.floorNumber}_${occupancy.model.tenantId}`
+                            }) :
+                            []
+                        );
+
+                        visualizationProps.setSelectedLayers(filteredLayers);
+                    }, 10)
+                }}
             />
         </div>
     );

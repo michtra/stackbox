@@ -270,7 +270,7 @@ async function saveOccupanciesEndpoint(buildingId, changesByOccupancyId) {
             throw new Error(errorText || response.statusText);
         }
 
-        return response;
+        return (await response.json()).data;
     }
     catch (error) {
         console.error("Error when saving occupancies:", error);
@@ -302,6 +302,85 @@ async function deleteOccupanciesEndpoint(buildingId, occupancyIdList) {
     }
 }
 
+async function createTenantEndpoint(tenantData) {
+    try {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_SERVER_URL}/api/tenants`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                ...await authHeaders(),
+            },
+            body: JSON.stringify(tenantData),
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(errorText || response.statusText);
+        }
+
+        return (await response.json()).data;
+    }
+    catch (error) {
+        console.error("Error when creating tenant:", error);
+        throw error;
+    }
+}
+
+async function addOccupancyEndpoint(buildingId, occupancyData) {
+    try {
+        const body = {
+            tenantId: occupancyData?.tenantId,
+            roomNumber: occupancyData?.roomNumber,
+            squareFeet: occupancyData?.squareFeet,
+            baseRent: occupancyData?.baseRent,
+            leaseType: occupancyData?.leaseType,
+            leaseStart: occupancyData?.leaseStart,
+            leaseEnd: occupancyData?.leaseEnd,
+        }
+
+        var tenantData = null;
+
+        if (body.tenantId == "new") {
+            const tenantEndpointData = {
+                name: occupancyData?.newTenantName,
+                color: occupancyData?.newTenantColor,
+                contact: {}
+            };
+            if (occupancyData?.newTenantContactEmail) {
+                tenantEndpointData.contact.email = occupancyData?.newTenantContactEmail;
+            }
+            if (occupancyData?.newTenantContactPhone) {
+                tenantEndpointData.contact.phone = occupancyData?.newTenantContactPhone;
+            }
+            tenantData = await createTenantEndpoint(tenantEndpointData);
+            body.tenantId = tenantData.id;
+        }
+
+        const occupancyResponse = await fetch(`${process.env.NEXT_PUBLIC_SERVER_URL}/api/buildings/${buildingId}/floors/${occupancyData?.floorNumber}/occupancies`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                ...await authHeaders(),
+            },
+            body: JSON.stringify(body),
+        });
+
+        if (!occupancyResponse.ok) {
+            const errorText = await response.text();
+            throw new Error(errorText || response.statusText);
+        }
+
+        return {
+            "floorData": (await occupancyResponse.json()).data,
+            "tenantData": tenantData
+        };
+    }
+    catch (error) {
+        console.error("Error when creating tenant:", error);
+        throw error;
+    }
+}
+
 export {
     urlToFile,
     createBuilding,
@@ -313,5 +392,7 @@ export {
     saveTenantEndpoint,
     saveTenantAllEndpoint,
     saveOccupanciesEndpoint,
-    deleteOccupanciesEndpoint
+    deleteOccupanciesEndpoint,
+    createTenantEndpoint,
+    addOccupancyEndpoint,
 };

@@ -18,9 +18,18 @@ export default function BuildingVisualization({ stackingData, isDarkMode = false
     const mapRef = useRef();
     const mapContainerRef = useRef();
     var floorData = proportionBuilding(stackingData);
+    const unselectedOpacity = 0.1
 
     const showInfo = (e) => {
         console.log("Click!", e);
+    }
+
+    const determineOpacity = (key) => {
+        return (
+            (visualizationProps.selectedFloors.length === 0 || visualizationProps.selectedFloors.includes(parseInt(key.split("_")[0], 10))) &&
+            (visualizationProps.selectedTenants.length === 0 || visualizationProps.selectedTenants.includes(key.split("_")[1])) &&
+            (visualizationProps.selectedLayers.length === 0 || visualizationProps.selectedLayers.includes(`${key.split("_")[0]}_${key.split("_")[1]}`))
+        );
     }
 
     useEffect(() => {
@@ -40,8 +49,8 @@ export default function BuildingVisualization({ stackingData, isDarkMode = false
 
     useEffect(() => {
         for (const key of Object.keys(floorData)) {
-            if (mapRef.current?.getSource(`${key}-floorplan`)) {
-                mapRef.current.getSource(`${key}-floorplan`)?.setData(floorData[key]?.data);
+            if (mapRef.current?.getSource(`${key}_floorplan`)) {
+                mapRef.current.getSource(`${key}_floorplan`)?.setData(floorData[key]?.data);
             }
         }
     }, [stackingData?.tenants]);
@@ -63,20 +72,20 @@ export default function BuildingVisualization({ stackingData, isDarkMode = false
             });
 
             loadKeyList.forEach((key) => {
-                if (!(mapRef.current?.getSource(`${key}-floorplan`))) {
-                    mapRef.current.addSource(`${key}-floorplan`, floorData[key]);
+                if (!(mapRef.current?.getSource(`${key}_floorplan`))) {
+                    mapRef.current.addSource(`${key}_floorplan`, floorData[key]);
                     mapRef.current.addLayer({
-                        "id": `${key}-floorplan-layer`,
+                        "id": `${key}_floorplan-layer`,
                         "type": "fill-extrusion",
-                        "source": `${key}-floorplan`,
+                        "source": `${key}_floorplan`,
                         "paint": {
                             "fill-extrusion-color": ["get", "color"],
                             "fill-extrusion-height": ["get", "height"],
                             "fill-extrusion-base": ["get", "base_height"],
                             "fill-extrusion-opacity": (
-                                visualizationProps.selectedFloors.length === 0 || visualizationProps.selectedFloors.includes(parseInt(key.split("_")[0], 10)) ?
+                                determineOpacity(key) ?
                                 1.0 :
-                                0.25
+                                unselectedOpacity
                             ),
                         }
                     });
@@ -90,9 +99,9 @@ export default function BuildingVisualization({ stackingData, isDarkMode = false
             Object.keys(mapRef.current?.getStyle().sources).forEach((sourceKey) => {
                 if (mapRef.current?.getLayer(`${sourceKey}-layer`)) {
                     const newOpacity = (
-                        visualizationProps.selectedFloors.length === 0 || visualizationProps.selectedFloors.includes(parseInt(sourceKey.split("_")[0], 10)) ?
+                        determineOpacity(sourceKey) ?
                         1.0 :
-                        0.25
+                        unselectedOpacity
                     )
                     if (mapRef.current.getPaintProperty(`${sourceKey}-layer`, "fill-extrusion-opacity") !== newOpacity) {
                         mapRef.current.setPaintProperty(`${sourceKey}-layer`, "fill-extrusion-opacity", newOpacity);
@@ -100,7 +109,7 @@ export default function BuildingVisualization({ stackingData, isDarkMode = false
                 }
             });
         }
-    }, [visualizationProps.selectedFloors]);
+    }, [visualizationProps.selectedFloors, visualizationProps.selectedTenants, visualizationProps.selectedLayers]);
 
     useEffect(() => {
         mapRef.current.setStyle(isDarkMode ? "mapbox://styles/mapbox/dark-v11" : "mapbox://styles/mapbox/light-v11");
@@ -122,26 +131,26 @@ export default function BuildingVisualization({ stackingData, isDarkMode = false
                     }
                 });
 
-                if (!mapRef.current.getSource(`${key}-floorplan`)) {
-                    mapRef.current.addSource(`${key}-floorplan`, floorData[key]);
+                if (!mapRef.current.getSource(`${key}_floorplan`)) {
+                    mapRef.current.addSource(`${key}_floorplan`, floorData[key]);
                     mapRef.current.addLayer({
-                        "id": `${key}-floorplan-layer`,
+                        "id": `${key}_floorplan-layer`,
                         "type": "fill-extrusion",
-                        "source": `${key}-floorplan`,
+                        "source": `${key}_floorplan`,
                         "paint": {
                             "fill-extrusion-color": ["get", "color"],
                             "fill-extrusion-height": ["get", "height"],
                             "fill-extrusion-base": ["get", "base_height"],
                             "fill-extrusion-opacity": (
-                                visualizationProps.selectedFloors.length === 0 || visualizationProps.selectedFloors.includes(parseInt(key.split("_")[0], 10)) ?
+                                determineOpacity(key) ?
                                 1.0 :
-                                0.25
+                                unselectedOpacity
                             ),
                         }
                     });
                 }
                 else if (key.includes("Vacancy") || key.includes("Plate")) {
-                    mapRef.current.getSource(`${key}-floorplan`)?.setData(floorData[key]?.data);
+                    mapRef.current.getSource(`${key}_floorplan`)?.setData(floorData[key]?.data);
                 }
             }
         });
