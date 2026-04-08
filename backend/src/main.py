@@ -501,7 +501,7 @@ async def update_building_tenants(id: UUID, tenants: List[TenantUpdate], db: Ses
                     db_tenant.contact_phone = tenant.contact.phone
             if tenant.color is not None:
                 db_tenant.color = tenant.color
-            setattr(db_tenant, 'updated_at', datetime.now(timezone.utc))
+            setattr(db_tenant, "updated_at", datetime.now(timezone.utc))
             updated_tenants.append(db_tenant)
         else:
             raise HTTPException(
