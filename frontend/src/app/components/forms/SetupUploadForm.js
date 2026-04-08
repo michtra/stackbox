@@ -1,9 +1,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
-import { Upload } from "@mui/icons-material";
-import { Apartment } from "@mui/icons-material";
-import { ListAlt } from "@mui/icons-material";
+import { Upload, Apartment, ListAlt } from "@mui/icons-material";
 
 export default function SetupUploadForm({ isUploadPanelOpen, setIsUploadPanelOpen }) {
     const router = useRouter();

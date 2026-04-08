@@ -2,8 +2,7 @@
 
 import { Fragment, useEffect, useState } from "react";
 import { Menu, MenuItem, Tooltip } from "@mui/material";
-import { AccountCircle } from "@mui/icons-material";
-import { Logout } from "@mui/icons-material";
+import { AccountCircle, Logout } from "@mui/icons-material";
 import { signOut } from "next-auth/react";
 import clsx from "clsx";
 import { useRouter } from "next/navigation";

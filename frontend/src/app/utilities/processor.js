@@ -450,8 +450,6 @@ function meterToLatLng(meter, lat) {
  * @returns 
  */
 function getRentalData(stackingData) {
-    // TODO: Change rental data ID so that the the MapBox GL JS layer ID is attached to it.
-
     let totalOccupiedSF = 0;
     let rentalIncome = 0;
     let weightedTotalLeaseTerm = 0;

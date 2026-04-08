@@ -180,10 +180,10 @@ async function getBuilding(id) {
  * @param {int} limit Max number of buildings on one page.
  * @returns Pagination data according to BuildingListResponse.
  */
-async function getBuildingListing(page, limit) {
+async function getBuildingListing(page, limit, search) {
     try {
         const headers = await authHeaders();
-        const buildingListingResponse = await fetch(`${process.env.NEXT_PUBLIC_SERVER_URL}/api/buildings?page=${page}&limit=${limit}`, { headers });
+        const buildingListingResponse = await fetch(`${process.env.NEXT_PUBLIC_SERVER_URL}/api/buildings?page=${page}&limit=${limit}${search ? `&search=${search}` : ""}`, { headers });
         if (!buildingListingResponse.ok) {
             console.error("Network error when getting building list:", buildingListingResponse.statusText);
             return;
@@ -381,6 +381,26 @@ async function addOccupancyEndpoint(buildingId, occupancyData) {
     }
 }
 
+async function deleteBuildingEndpoint(buildingId) {
+    try {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_SERVER_URL}/api/buildings/${buildingId}`, {
+            method: "DELETE",
+            headers: await authHeaders(),
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(errorText || response.statusText);
+        }
+
+        return response;
+    }
+    catch (error) {
+        console.error("Error when deleting building:", error);
+        throw error;
+    }
+}
+
 export {
     urlToFile,
     createBuilding,
@@ -395,4 +415,5 @@ export {
     deleteOccupanciesEndpoint,
     createTenantEndpoint,
     addOccupancyEndpoint,
+    deleteBuildingEndpoint,
 };

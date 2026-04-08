@@ -48,7 +48,6 @@ export default function BuildingAdjustments({ srcProps, isDarkMode = false, mapR
 
     useEffect(() => {
         mapRef.current.setStyle(isDarkMode ? "mapbox://styles/mapbox/dark-v11" : "mapbox://styles/mapbox/light-v11");
-        // TODO: Fix this sometime later
         mapRef.current.on("style.load", () => {
             modelProps.modelRef.current.setCoords([modelProps.coordLng, modelProps.coordLat]);
             modelProps.modelRef.current.setRotation({ x: 0, y: 0, z: modelProps.rotation });

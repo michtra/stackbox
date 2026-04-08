@@ -163,7 +163,7 @@ def read_item(item_id: int, q: Union[str, None] = None):
 async def list_buildings(
     page: int = Query(1, ge=1),
     limit: int = Query(20, ge=1, le=100),
-    city: Optional[str] = None,
+    search: Optional[str] = None,
     db: Session = Depends(get_db),
     user: CognitoUser = Depends(get_current_user)
 ):
@@ -171,8 +171,14 @@ async def list_buildings(
     building_query = select(BuildingModel) \
                         .join(PropertyManagerModel, BuildingModel.id == PropertyManagerModel.building_id) \
                         .where(PropertyManagerModel.user_id == user.id)
-    if city:
-        building_query = building_query.where(BuildingModel.address_city == city)
+    
+    if search:
+        building_query = building_query.where(
+            or_(
+                BuildingModel.name.ilike(f"%{search}%"),
+                BuildingModel.address_street.ilike(f"%{search}%")
+            )
+        )
 
     total_buildings_query = select(func.count(BuildingModel.id)) \
                             .join(PropertyManagerModel, BuildingModel.id == PropertyManagerModel.building_id) \

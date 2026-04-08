@@ -19,7 +19,6 @@ export default function Page() {
     const [rerenderFloors, setRerenderFloors] = useState(new Set());
 
     const [selectedFloors, setSelectedFloors] = useState([]);
-    // TODO: Change this so that it includes all tenants initially.
     const [selectedTenants, setSelectedTenants] = useState([]);
     const [selectedLayers, setSelectedLayers] = useState([]);
 

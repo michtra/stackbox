@@ -2,8 +2,7 @@
 
 import clsx from "clsx";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronRight } from "@mui/icons-material";
-import { ChevronLeft } from "@mui/icons-material";
+import { ChevronRight, ChevronLeft } from "@mui/icons-material";
 
 import TopBar from "@/app/components/ui/TopBar";
 import { createTheme, ThemeProvider } from "@mui/material";

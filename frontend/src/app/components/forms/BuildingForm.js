@@ -4,9 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
 import { Slider } from "@mui/material";
-import { Upload } from "@mui/icons-material";
-import { Apartment } from "@mui/icons-material";
-import { ListAlt } from "@mui/icons-material";
+import { Upload, Apartment, ListAlt } from "@mui/icons-material";
 import { AddressAutofill, useAddressAutofillCore } from "@mapbox/search-js-react";
 import { SessionToken } from "@mapbox/search-js-core";
 
@@ -15,7 +13,6 @@ import NumberInput from "@/app/components/ui/NumberInput";
 import { loadAdjustmentsBuildingMesh } from "@/app/utilities/processor";
 
 export default function BuildingForm({ srcProps, isDarkMode = false, mapRef, modelProps }) {
-    // TODO: Google Maps Platform Place Autocomplete integration.
     const router = useRouter();
     const autofill = useAddressAutofillCore({
         accessToken: process.env.NEXT_PUBLIC_MAPBOX_TOKEN,
@@ -27,6 +24,7 @@ export default function BuildingForm({ srcProps, isDarkMode = false, mapRef, mod
     const [modelFileURL, setModelFileURL] = useState();
     const [excelFileURL, setExcelFileURL] = useState();
     const [buildingMetadata, setBuildingMetadata] = useState();
+    const [isCreatingBuilding, setIsCreatingBuilding] = useState(false);
 
     const isInputValidRefs = {
         lat: useRef(true),
@@ -48,14 +46,15 @@ export default function BuildingForm({ srcProps, isDarkMode = false, mapRef, mod
                     rotation: modelProps.rotation
                 }
             };
+
+            setIsCreatingBuilding(true);
             
-            // TODO: Cache building metadata somewhere.
-            createBuilding(srcProps.modelSrc, srcProps.excelSrc, metadata).then((buildingId) => {
-                if (buildingId) {
-                    router.push(`/property/${buildingId}`);
-                }
-            });
+            const buildingId = await createBuilding(srcProps.modelSrc, srcProps.excelSrc, metadata);
+            if (buildingId) {
+                router.push(`/property/${buildingId}`);
+            }
         }
+        setIsCreatingBuilding(false);
     }
 
     useEffect(() => {
@@ -117,6 +116,10 @@ export default function BuildingForm({ srcProps, isDarkMode = false, mapRef, mod
             </div>
             <AddressAutofill
                 accessToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN}
+                options={{
+                    streets: false,
+                    proximity: "ip",
+                }}
                 onRetrieve={(res) => {
                     setBuildingMetadata((val) => {
                         return {
@@ -410,12 +413,13 @@ export default function BuildingForm({ srcProps, isDarkMode = false, mapRef, mod
                 </button>
             </div>
             <button
-                className="flex flex-col justify-center items-center w-full h-12 p-2 gap-2 outline rounded-sm cursor-pointer hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-all"
+                className="flex flex-col justify-center items-center w-full h-12 p-2 gap-2 outline rounded-sm cursor-pointer hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black disabled:bg-black/25 disabled:text-black/40 dark:disabled:bg-white/25 dark:disabled:text-white/40 disabled:outline-0 disabled:cursor-not-allowed transition-all"
                 onClick={() => {
                     handleSubmit();
                 }}
+                disabled={isCreatingBuilding}
             >
-                Submit
+                {isCreatingBuilding ? "Creating..." : "Create"}
             </button>
         </div>
     );
