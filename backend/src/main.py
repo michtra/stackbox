@@ -539,7 +539,7 @@ async def update_tenant(id: UUID, tenant: TenantUpdate, db: Session = Depends(ge
     if tenant.color is not None:
         db_tenant.color = tenant.color
 
-    setattr(db_tenant, 'updated_at', datetime.now(timezone.utc))
+    setattr(db_tenant, "updated_at", datetime.now(timezone.utc))
     try:
         db.commit()
         db.refresh(db_tenant)
