@@ -47,6 +47,7 @@ class BuildingModel(Base):
 
     floors: Mapped[list["FloorModel"]] = relationship("FloorModel", back_populates="building", cascade="all, delete-orphan")
     property_managers: Mapped[list["PropertyManagerModel"]] = relationship("PropertyManagerModel", back_populates="building", cascade="all, delete-orphan")
+    files: Mapped[list["FileModel"]] = relationship("FileModel", back_populates="building", cascade="all, delete-orphan")
 
 class TenantModel(Base):
     __tablename__ = "tenants"
@@ -102,7 +103,7 @@ class FileModel(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
     processed_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
 
-    building: Mapped["BuildingModel"] = relationship("BuildingModel")
+    building: Mapped["BuildingModel"] = relationship("BuildingModel", back_populates="files")
 
 
 class JobModel(Base):

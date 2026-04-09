@@ -51,3 +51,17 @@ def test_building_listing(client, page, limit):
     Path("test/output").mkdir(exist_ok=True)
     Path(f'test/output/test_building_listing.json').write_text(data)
     assert response.status_code == 200
+
+def test_create_tenant(client):
+    response = client.post(
+        "/api/tenants",
+        json={
+            "name": "Test",
+            "color": "#ffffff",
+            "contact": {}
+        }
+    )
+    data = json.dumps(response.json(), indent=4)
+    Path("test/output").mkdir(exist_ok=True)
+    Path(f'test/output/test_create_tenant.json').write_text(data)
+    assert response.status_code == 201

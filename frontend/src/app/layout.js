@@ -5,7 +5,6 @@ import Script from "next/script";
 
 import AuthProvider from "@/app/components/auth/AuthProvider";
 import AuthRedirect from "@/app/components/auth/AuthRedirect";
-import AccountToggle from "@/app/components/ui/AccountToggle";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -39,7 +38,6 @@ export default function RootLayout({ children }) {
       >
         <AuthProvider>
           <AuthRedirect>
-            <AccountToggle className="absolute left-4 top-4" />
             {children}
           </AuthRedirect>
         </AuthProvider>

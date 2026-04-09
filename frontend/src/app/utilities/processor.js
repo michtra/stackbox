@@ -15,22 +15,42 @@ import { STLLoader } from "three/examples/jsm/loaders/STLLoader";
  */
 function proportionWall(floorPlanShapes, tenantList, totalSF, floorNum, buildingFloorHeightMin, buildingFloorHeightMax, wallThickness=1e-6) {
     if(Object.keys(tenantList).length === 0) {
-        return floorPlanShapes.map((shape) => {
-            return {
-                "type": "Feature",
-                "properties": {
-                    "floor": floorNum,
-                    "height": buildingFloorHeightMax - 0.5,
-                    "base_height": buildingFloorHeightMin,
-                    "color": "#ffffff",
-                    "tenant": "Vacancy"
-                },
-                "geometry": {
-                    "type": "Polygon",
-                    "coordinates": [shape]
-                }
-            };
-        });
+        return {
+            [`${floorNum}_Vacancy`]: floorPlanShapes.map((shape) => {
+                return {
+                    "type": "Feature",
+                    "properties": {
+                        "floor": floorNum,
+                        "height": buildingFloorHeightMax - 0.5,
+                        "base_height": buildingFloorHeightMin,
+                        "color": "#ffffff",
+                        "tenant": "Vacancy",
+                        "opacity": 1.0,
+                    },
+                    "geometry": {
+                        "type": "Polygon",
+                        "coordinates": [shape]
+                    }
+                };
+            }),
+            [`${floorNum}_Plate`]: floorPlanShapes.map((shape) => {
+                return {
+                    "type": "Feature",
+                    "properties": {
+                        "floor": floorNum,
+                        "height": buildingFloorHeightMax - 0.4,
+                        "base_height": buildingFloorHeightMax - 0.5,
+                        "color": "#ffffff",
+                        "tenant": "Plate",
+                        "opacity": 1.0,
+                    },
+                    "geometry": {
+                        "type": "Polygon",
+                        "coordinates": [shape]
+                    }
+                };
+            }),
+        };
     }
 
     const edgeLengths = floorPlanShapes.map((shape) => Array(shape.length).fill(0));
@@ -99,7 +119,7 @@ function proportionWall(floorPlanShapes, tenantList, totalSF, floorNum, building
     Separates shapes if there are multiple.
     Creates wall shape using wall coordinates and reverse of wall coordinates with offset.
     */
-    let tenantGeoJSONFeatures = [];
+    const tenantGeoJSONFeaturesMap = {};
     tenantPositions.forEach(([tenant, shapeIndex, edgeIndex, edgeProportion], tenantIndex) => {
         const [prevShapeIndex, prevEdgeIndex, prevEdgeProportion] = tenantIndex === 0 ? [0, 0, 0] : [tenantPositions[tenantIndex - 1][1], tenantPositions[tenantIndex - 1][2], tenantPositions[tenantIndex - 1][3]];
         const tenantWallCoordinates = [
@@ -168,14 +188,15 @@ function proportionWall(floorPlanShapes, tenantList, totalSF, floorNum, building
         ]);
 
         tenantWallCoordinates.forEach((wall, wallIndex) => {
-            tenantGeoJSONFeatures.push({
+            const tenantGeoJSONFeature = {
                 "type": "Feature",
                 "properties": {
                     "floor": floorNum,
                     "height": buildingFloorHeightMax - 0.5,
                     "base_height": buildingFloorHeightMin,
-                    "color": tenant !== "Vacancy" ? tenantList[tenant]["color"] : "#ffffff", // TODO: Implement color system
-                    "tenant": tenant
+                    "color": tenant !== "Vacancy" ? tenantList[tenant]["color"] : "#ffffff",
+                    "tenant": tenant,
+                    "opacity": 1.0,
                 },
                 "geometry": {
                     "coordinates": [
@@ -187,25 +208,33 @@ function proportionWall(floorPlanShapes, tenantList, totalSF, floorNum, building
                     ],
                     "type": "Polygon"
                 }
-            });
+            };
+            if (tenantGeoJSONFeaturesMap[`${floorNum}_${tenant}`]) {
+                tenantGeoJSONFeaturesMap[`${floorNum}_${tenant}`].push(tenantGeoJSONFeature);
+            }
+            else {
+                tenantGeoJSONFeaturesMap[`${floorNum}_${tenant}`] = [tenantGeoJSONFeature]
+            }
         });
     });
-    floorPlanShapes.map((shape) => {
-        tenantGeoJSONFeatures.push({
+    tenantGeoJSONFeaturesMap[`${floorNum}_Plate`] = floorPlanShapes.map((shape) => {
+        return {
             "type": "Feature",
             "properties": {
                 "floor": floorNum,
                 "height": buildingFloorHeightMax - 0.4,
                 "base_height": buildingFloorHeightMax - 0.5,
                 "color": "#ffffff",
+                "tenant": "Plate",
+                "opacity": 1.0,
             },
             "geometry": {
                 "type": "Polygon",
                 "coordinates": [shape]
             }
-        });
-    });
-    return tenantGeoJSONFeatures;
+        };
+    })
+    return tenantGeoJSONFeaturesMap;
 }
 
 /**
@@ -246,18 +275,21 @@ function proportionBuilding(stackingData) {
         buildingFloorHeightMaxList[i] = currHeight;
     }
 
-    const geoJSONFeatures = {
-        "type": "geojson",
-        "data": {
-            "type": "FeatureCollection",
-            "features": []
-        }
-    };
+    const geoJSONFeaturesMap = {}
 
     for(let i = 0; i < stackingData["building"]["metadata"]["totalFloors"]; i++) {
-        geoJSONFeatures["data"]["features"].push(...proportionWall(floorPlanShapesList[i], tenantList[i], totalSFList[i], i + 1, buildingFloorHeightMinList[i], buildingFloorHeightMaxList[i]));
+        const tenantGeoJSONFeaturesMap = proportionWall(floorPlanShapesList[i], tenantList[i], totalSFList[i], i + 1, buildingFloorHeightMinList[i], buildingFloorHeightMaxList[i]);
+        Object.entries(tenantGeoJSONFeaturesMap).forEach(([key, val]) => {
+            geoJSONFeaturesMap[key] = {
+                "type": "geojson",
+                "data": {
+                    "type": "FeatureCollection",
+                    "features": val
+                }
+            }
+        });
     }
-    return geoJSONFeatures;
+    return geoJSONFeaturesMap;
 }
 
 /**
@@ -361,13 +393,14 @@ function loadAdjustmentsBuildingMesh(src, modelProps, mapRef=null) {
         geometry.computeBoundingBox();
         geometry.translate(0, 0, -geometry.boundingBox.min.z);
 
-        const material = new THREE.MeshPhongMaterial({ color: 0xeeeeee });
+        const material = new THREE.MeshPhongMaterial({ color: 0xb3f5d6 });
         modelProps.meshRef.current = new THREE.Mesh(geometry, material);
 
         modelProps.modelRef.current = window.tb.Object3D({
             obj: modelProps.meshRef.current,
             units: 'meters',
             draggable: true,
+            anchor: "center",
         });
         modelProps.modelRef.current.setCoords([modelProps.coordLng, modelProps.coordLat]);
         modelProps.modelRef.current.setRotation({ x: 0, y: 0, z: modelProps.rotation });
@@ -410,4 +443,73 @@ function meterToLatLng(meter, lat) {
     }
 }
 
-export { proportionBuilding, propertyListingToGeoJSONFeatures, loadAdjustmentsBuildingMesh, meterToLatLng };
+
+/**
+ * Converts stackingData into rental data and statistics used across the information tabs.
+ * @param {Object} stackingData - JSON endpoint output from data of a singular building. 
+ * @returns 
+ */
+function getRentalData(stackingData) {
+    let totalOccupiedSF = 0;
+    let rentalIncome = 0;
+    let weightedTotalLeaseTerm = 0;
+    let rentRoll = [];
+    const tenantNames = {};
+    const now = new Date();
+
+    stackingData.tenants.forEach((tenant) => {
+        tenantNames[tenant.id] = tenant.name;
+    });
+
+    stackingData.floors.forEach((floor) => {
+        floor.occupancies.forEach((occupancy) => {
+            const leaseStart = new Date(occupancy.leaseStart);
+            const leaseEnd = new Date(occupancy.leaseEnd);
+            if (leaseStart <= now <= leaseEnd) {
+                
+                // Calculating months until lease end, takes fractional months into account
+                let leaseLeftMonths = 0;
+                const daysInCurrMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+                if (leaseEnd.getFullYear() !== now.getFullYear() || leaseEnd.getMonth() !== now.getMonth()) {
+                    const daysInLeaseEndMonth = new Date(leaseEnd.getFullYear(), leaseEnd.getMonth() + 1, 0).getDate();
+                    const monthFractionCurrMonth = (daysInCurrMonth - now.getDate()) / daysInCurrMonth;
+                    const monthFractionLeaseEndMonth = (leaseEnd.getDate() - daysInLeaseEndMonth) / daysInLeaseEndMonth;
+                    leaseLeftMonths = ((leaseEnd.getFullYear() - now.getFullYear()) * 12) + (leaseEnd.getMonth() - now.getMonth()) + monthFractionLeaseEndMonth + monthFractionCurrMonth;
+                }
+                else {
+                    leaseLeftMonths = (leaseEnd.getDate() - now.getDate()) / daysInCurrMonth;
+                }
+
+                // Calculating weighted total lease term, later divided by total occupied SF
+                weightedTotalLeaseTerm += leaseLeftMonths * occupancy.squareFeet;
+
+                totalOccupiedSF += occupancy.squareFeet;
+                rentalIncome += occupancy.baseRent;
+
+                rentRoll.push({
+                    "id": occupancy.id,
+                    "floorNumber": floor.floorNumber,
+                    "roomNumber": occupancy.roomNumber,
+                    "tenantId": occupancy.tenantId,
+                    "tenantName": tenantNames[occupancy.tenantId],
+                    "leaseType": occupancy.leaseType,
+                    "leaseStart": leaseStart,
+                    "leaseEnd": leaseEnd,
+                    "leaseLeftMonths": leaseLeftMonths,
+                    "squareFeet": occupancy.squareFeet,
+                    "baseRent": occupancy.baseRent,
+                    "psfRent": occupancy.baseRent / occupancy.squareFeet,
+                });
+            }
+        });
+    });
+
+    return {
+        "rentRoll": rentRoll,
+        "totalOccupiedSF": totalOccupiedSF,
+        "rentalIncome": rentalIncome,
+        "walt": totalOccupiedSF === 0 ? 0 : weightedTotalLeaseTerm / totalOccupiedSF,
+    }
+}
+
+export { proportionBuilding, propertyListingToGeoJSONFeatures, loadAdjustmentsBuildingMesh, meterToLatLng, getRentalData };

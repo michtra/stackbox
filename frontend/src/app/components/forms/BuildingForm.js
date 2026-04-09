@@ -4,27 +4,31 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
 import { Slider } from "@mui/material";
-import { Upload } from "@mui/icons-material";
-import { Apartment } from "@mui/icons-material";
-import { ListAlt } from "@mui/icons-material";
+import { Upload, Apartment, ListAlt } from "@mui/icons-material";
+import { AddressAutofill, useAddressAutofillCore } from "@mapbox/search-js-react";
+import { SessionToken } from "@mapbox/search-js-core";
 
 import { createBuilding, getBuildingMetadata } from "@/app/utilities/endpoints";
 import NumberInput from "@/app/components/ui/NumberInput";
 import { loadAdjustmentsBuildingMesh } from "@/app/utilities/processor";
 
-export default function BuildingForm({ srcProps, isDarkMode, mapRef, modelProps }) {
-    // TODO: Google Maps Platform Place Autocomplete integration.
+export default function BuildingForm({ srcProps, isDarkMode = false, mapRef, modelProps }) {
     const router = useRouter();
+    const autofill = useAddressAutofillCore({
+        accessToken: process.env.NEXT_PUBLIC_MAPBOX_TOKEN,
+    });
+    const sessionToken = new SessionToken()
 
     const [modelFileName, setModelFileName] = useState();
     const [excelFileName, setExcelFileName] = useState();
     const [modelFileURL, setModelFileURL] = useState();
     const [excelFileURL, setExcelFileURL] = useState();
     const [buildingMetadata, setBuildingMetadata] = useState();
+    const [isCreatingBuilding, setIsCreatingBuilding] = useState(false);
 
     const isInputValidRefs = {
-        isLatValidRef: useRef(true),
-        isLngValidRef: useRef(true),
+        lat: useRef(true),
+        lng: useRef(true),
     }
 
     const handleSubmit = async () => {
@@ -42,18 +46,53 @@ export default function BuildingForm({ srcProps, isDarkMode, mapRef, modelProps 
                     rotation: modelProps.rotation
                 }
             };
-            // TODO: Cache building metadata somewhere.
-            createBuilding(srcProps.modelSrc, srcProps.excelSrc, metadata).then((buildingId) => {
-                if (buildingId) {
-                    router.push(`/property/${buildingId}`);
-                }
-            });
+
+            setIsCreatingBuilding(true);
+            
+            const buildingId = await createBuilding(srcProps.modelSrc, srcProps.excelSrc, metadata);
+            if (buildingId) {
+                router.push(`/property/${buildingId}`);
+            }
         }
+        setIsCreatingBuilding(false);
     }
 
     useEffect(() => {
         getBuildingMetadata(srcProps.excelSrc).then((val) => {
-            setBuildingMetadata(val);
+            const newMetadata = val;
+            autofill.suggest(
+                `${val.address.street}, ${val.address.city}, ${val.address.state} ${val.address.zip}, ${val.address.country}`,
+                { 
+                    limit: 1, 
+                    sessionToken: sessionToken,
+                }
+            ).then((suggestRes) => {
+                if (suggestRes.suggestions?.length > 0) {
+                    autofill.retrieve(suggestRes.suggestions[0], { sessionToken: sessionToken }).then((retrieveRes) => {
+                        if (retrieveRes.features?.length > 0) {
+                            newMetadata.address = {
+                                street: retrieveRes.features[0].properties.address_line1,
+                                city: retrieveRes.features[0].properties.address_level2,
+                                state: retrieveRes.features[0].properties.address_level1,
+                                zip: retrieveRes.features[0].properties.postcode,
+                                country: retrieveRes.features[0].properties.country_code.toUpperCase(),
+                            }
+                            modelProps.setCoordLng(retrieveRes.features[0]?.geometry.coordinates[0]);
+                            modelProps.setCoordLat(retrieveRes.features[0]?.geometry.coordinates[1]);
+                            modelProps.modelRef.current.setCoords([retrieveRes.features[0]?.geometry.coordinates[0], retrieveRes.features[0]?.geometry.coordinates[1]]);
+                            mapRef.current.easeTo({
+                                center: [retrieveRes.features[0]?.geometry.coordinates[0], retrieveRes.features[0]?.geometry.coordinates[1]],
+                                duration: 200,
+                                easing: (n) => n
+                            });
+                            mapRef.current.triggerRepaint();
+                        }
+                    });
+                }
+            })
+            .finally(() => {
+                setBuildingMetadata(newMetadata);
+            });
         });
     }, []);
 
@@ -75,6 +114,136 @@ export default function BuildingForm({ srcProps, isDarkMode, mapRef, modelProps 
                     }}
                 />
             </div>
+            <AddressAutofill
+                accessToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN}
+                options={{
+                    streets: false,
+                    proximity: "ip",
+                }}
+                onRetrieve={(res) => {
+                    setBuildingMetadata((val) => {
+                        return {
+                            ...val,
+                            address: {
+                                street: res.features[0]?.properties.address_line1,
+                                city: res.features[0]?.properties.address_level2,
+                                state: res.features[0]?.properties.address_level1,
+                                zip: res.features[0]?.properties.postcode,
+                                country: res.features[0]?.properties.country_code.toUpperCase(),
+                            },
+                        }
+                    });
+                    if (res.features[0]?.geometry?.coordinates && res.features[0]?.geometry?.coordinates.length == 2) {
+                        modelProps.setCoordLng(res.features[0]?.geometry.coordinates[0]);
+                        modelProps.setCoordLat(res.features[0]?.geometry.coordinates[1]);
+                        modelProps.modelRef.current.setCoords([res.features[0]?.geometry.coordinates[0], res.features[0]?.geometry.coordinates[1]]);
+                        mapRef.current.easeTo({
+                            center: [res.features[0]?.geometry.coordinates[0], res.features[0]?.geometry.coordinates[1]],
+                            duration: 200,
+                            easing: (n) => n
+                        });
+                        mapRef.current.triggerRepaint();
+                    }
+                }}
+            >
+                <div className="flex flex-col gap-2">
+                    <div className="flex flex-col gap-2">
+                        <span>Address</span>
+                        <input
+                            value={buildingMetadata?.address.street ?? ""}
+                            onChange={(e) => {
+                                setBuildingMetadata((val) => {
+                                    return {
+                                        ...val,
+                                        address: {
+                                            ...val.address,
+                                            street: e.target.value,
+                                        }
+                                    }
+                                })
+                            }}
+                            className="flex flex-row w-84 p-2 gap-2 justify-between items-center outline rounded-sm focus-within:outline-blue-500 focus-within:outline-2"
+                            autoComplete="address-line1"
+                        />
+                    </div>
+                    <div className="flex flex-col gap-2">
+                        <span>City</span>
+                        <input
+                            value={buildingMetadata?.address.city ?? ""}
+                            onChange={(e) => {
+                                setBuildingMetadata((val) => {
+                                    return {
+                                        ...val,
+                                        address: {
+                                            ...val.address,
+                                            city: e.target.value,
+                                        }
+                                    }
+                                })
+                            }}
+                            className="flex flex-row w-84 p-2 gap-2 justify-between items-center outline rounded-sm focus-within:outline-blue-500 focus-within:outline-2"
+                            autoComplete="address-level2"
+                        />
+                    </div>
+                    <div className="flex flex-col gap-2">
+                        <span>State</span>
+                        <input
+                            value={buildingMetadata?.address.state ?? ""}
+                            onChange={(e) => {
+                                setBuildingMetadata((val) => {
+                                    return {
+                                        ...val,
+                                        address: {
+                                            ...val.address,
+                                            state: e.target.value,
+                                        }
+                                    }
+                                })
+                            }}
+                            className="flex flex-row w-84 p-2 gap-2 justify-between items-center outline rounded-sm focus-within:outline-blue-500 focus-within:outline-2"
+                            autoComplete="address-level1"
+                        />
+                    </div>
+                    <div className="flex flex-col gap-2">
+                        <span>Postal Code</span>
+                        <input
+                            value={buildingMetadata?.address.zip ?? ""}
+                            onChange={(e) => {
+                                setBuildingMetadata((val) => {
+                                    return {
+                                        ...val,
+                                        address: {
+                                            ...val.address,
+                                            zip: e.target.value,
+                                        }
+                                    }
+                                })
+                            }}
+                            className="flex flex-row w-84 p-2 gap-2 justify-between items-center outline rounded-sm focus-within:outline-blue-500 focus-within:outline-2"
+                            autoComplete="postal-code"
+                        />
+                    </div>
+                    <div className="flex flex-col gap-2">
+                        <span>Country</span>
+                        <input
+                            value={buildingMetadata?.address.country ?? ""}
+                            onChange={(e) => {
+                                setBuildingMetadata((val) => {
+                                    return {
+                                        ...val,
+                                        address: {
+                                            ...val.address,
+                                            country: e.target.value,
+                                        }
+                                    }
+                                })
+                            }}
+                            className="flex flex-row w-84 p-2 gap-2 justify-between items-center outline rounded-sm focus-within:outline-blue-500 focus-within:outline-2"
+                            autoComplete="country"
+                        />
+                    </div>
+                </div>
+            </AddressAutofill>
             <div className="flex flex-col">
                 <span>Scale</span>
                 <Slider
@@ -138,7 +307,7 @@ export default function BuildingForm({ srcProps, isDarkMode, mapRef, modelProps 
                     increment={0.0001}
                     min={-90}
                     max={90}
-                    isValid={isInputValidRefs.isLatValidRef}
+                    isValid={isInputValidRefs.lat}
                     onChange={(val) => {
                         modelProps.setCoordLat(val);
                         modelProps.modelRef.current.setCoords([modelProps.coordLng, val]);
@@ -153,7 +322,7 @@ export default function BuildingForm({ srcProps, isDarkMode, mapRef, modelProps 
                     increment={0.0001}
                     min={-180}
                     max={180}
-                    isValid={isInputValidRefs.isLngValidRef}
+                    isValid={isInputValidRefs.lng}
                     onChange={(val) => {
                         modelProps.setCoordLng(val);
                         modelProps.modelRef.current.setCoords([val, modelProps.coordLat]);
@@ -244,12 +413,13 @@ export default function BuildingForm({ srcProps, isDarkMode, mapRef, modelProps 
                 </button>
             </div>
             <button
-                className="flex flex-col justify-center items-center w-full h-12 p-2 gap-2 outline rounded-sm cursor-pointer hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-all"
+                className="flex flex-col justify-center items-center w-full h-12 p-2 gap-2 outline rounded-sm cursor-pointer hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black disabled:bg-black/25 disabled:text-black/40 dark:disabled:bg-white/25 dark:disabled:text-white/40 disabled:outline-0 disabled:cursor-not-allowed transition-all"
                 onClick={() => {
                     handleSubmit();
                 }}
+                disabled={isCreatingBuilding}
             >
-                Submit
+                {isCreatingBuilding ? "Creating..." : "Create"}
             </button>
         </div>
     );

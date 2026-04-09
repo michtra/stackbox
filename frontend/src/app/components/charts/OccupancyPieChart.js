@@ -8,6 +8,7 @@ import {
     Legend,
     Title
 } from 'chart.js';
+import { useEffect, useState } from 'react';
 
 ChartJS.register(ArcElement, Tooltip, Legend, Title);
 
@@ -45,22 +46,26 @@ function calculateTenantOccupancy(stackingData) {
         }
     })
 
+    const tenantIds = Object.keys(tenantOccupancy)
     const labels = Object.keys(tenantOccupancy).map((key) => tenantData[key].name);
     const values = Object.values(tenantOccupancy);
     const colors = Object.keys(tenantOccupancy).map((key) => tenantData[key]?.color || "#cccccc");
 
     // Add vacancy
     if (totalVacancy > 0) {
+        tenantIds.push("Vacancy");
         labels.push('Vacancy (Owner)');
         values.push(totalVacancy);
         colors.push('#e5e5e5');
     }
 
-    return { labels, values, colors };
+    return { tenantIds, labels, values, colors };
 }
 
-export default function OccupancyPieChart({ stackingData, title = 'Tenant Occupancy Distribution', isDarkMode = false }) {
-    const { labels, values, colors } = calculateTenantOccupancy(stackingData);
+export default function OccupancyPieChart({ stackingData, title = 'Tenant Occupancy Distribution', isDarkMode = false, visualizationProps }) {
+    const { tenantIds, labels, values, colors } = calculateTenantOccupancy(stackingData);
+
+    const [visibleTenants, setVisibleTenants] = useState([...tenantIds, "Plate"]);
 
     const data = {
         labels,
@@ -93,6 +98,19 @@ export default function OccupancyPieChart({ stackingData, title = 'Tenant Occupa
                     color: isDarkMode ? '#e2e8f0' : '#1f2937',
                     boxWidth: 12,
                     boxHeight: 12
+                },
+                onClick: (e, legendItem, legend) => {
+                    const newVisibleTenants = [...visibleTenants];
+                    if (legendItem.hidden) {
+                        newVisibleTenants.push(tenantIds[legendItem.index]);
+                    }
+                    else {
+                        newVisibleTenants.splice(newVisibleTenants.indexOf(tenantIds[legendItem.index]), 1);
+                    }
+                    setVisibleTenants(newVisibleTenants);
+                    visualizationProps.setSelectedTenants(newVisibleTenants);
+                    legend.chart.toggleDataVisibility(legendItem.index);
+                    legend.chart.update();
                 }
             },
             title: {
@@ -119,18 +137,37 @@ export default function OccupancyPieChart({ stackingData, title = 'Tenant Occupa
                     }
                 }
             }
+        },
+        onHover: (e, chartElement) => {
+            if (chartElement[0]) {
+                if (visualizationProps.selectedTenants.length <= 1 && visualizationProps.selectedTenants.includes(tenantIds[chartElement[0]?.index])) {
+                    return;
+                }
+                visualizationProps.setSelectedTenants([tenantIds[chartElement[0]?.index]]);
+            }
         }
     };
 
     return (
-        <div className="w-full h-full flex items-center justify-center" style={{ 
-            minHeight: '500px', 
-            backgroundColor: isDarkMode ? '#0f172b' : '#ffffff' 
-        }}>
-            <div className="w-full max-w-2xl" style={{ 
-                height: '500px', 
+        <div
+            className="w-full h-full flex items-center justify-center"
+            style={{ 
+                minHeight: '500px', 
                 backgroundColor: isDarkMode ? '#0f172b' : '#ffffff' 
-            }}>
+            }}
+        >
+            <div
+                className="w-full max-w-2xl"
+                style={{ 
+                    height: '500px', 
+                    backgroundColor: isDarkMode ? '#0f172b' : '#ffffff'
+                }}
+                onMouseLeave={() => {
+                    if (visualizationProps.selectedTenants.length !== 0) {
+                        visualizationProps.setSelectedTenants(visibleTenants);
+                    }
+                }}
+            >
                 <Pie data={data} options={options} />
             </div>
         </div>

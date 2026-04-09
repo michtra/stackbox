@@ -1,13 +1,15 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react";
-import { DataGrid } from "@mui/x-data-grid";
+import { DataGrid, gridFilteredSortedRowEntriesSelector, gridFilteredSortedRowIdsSelector, useGridApiRef } from "@mui/x-data-grid";
 
 import FloorOccupancyChart from "@/app/components/charts/FloorOccupancyChart";
 import ChartExportButton from "@/app/components/charts/ChartExportButton";
 
-export default function BuildingComposition({ stackingData, isDarkMode, timeUnit, rentalData }) {
+export default function BuildingComposition({ stackingData, isDarkMode = false, timeUnit, rentalData, visualizationProps }) {
     const floorChartRef = useRef(null);
+    const apiRef = useGridApiRef();
+
     const [rentRoll, setRentRoll] = useState(rentalData.rentRoll);
 
     const leaseLeftYearsList = rentalData.rentRoll.map((row) => row.leaseLeftMonths / 12);
@@ -15,7 +17,7 @@ export default function BuildingComposition({ stackingData, isDarkMode, timeUnit
 
     const rentRollCols = [
         {
-            field: "floor",
+            field: "floorNumber",
             headerName: "Floor",
             type: "number",
             width: 70,
@@ -23,8 +25,8 @@ export default function BuildingComposition({ stackingData, isDarkMode, timeUnit
         {
             field: "roomNumber",
             headerName: "Room/Suite Number",
-            type: "number",
-            width: 70,
+            type: "string",
+            width: 150,
         },
         {
             field: "tenantName",
@@ -36,7 +38,7 @@ export default function BuildingComposition({ stackingData, isDarkMode, timeUnit
             field: "leaseType",
             headerName: "Lease Type",
             type: "string",
-            width: 100,
+            width: 120,
         },
         {
             field: "leaseStart",
@@ -104,7 +106,7 @@ export default function BuildingComposition({ stackingData, isDarkMode, timeUnit
                         </ChartExportButton>
                     </div>
                     <div className="mt-4">
-                        <FloorOccupancyChart stackingData={stackingData} isDarkMode={isDarkMode} />
+                        <FloorOccupancyChart stackingData={stackingData} isDarkMode={isDarkMode} visualizationProps={visualizationProps} />
                     </div>
                 </div>
             </div>
@@ -114,6 +116,21 @@ export default function BuildingComposition({ stackingData, isDarkMode, timeUnit
                 columns={rentRollCols}
                 initialState={{ pagination: { page: 0, pageSize: 50 } }}
                 pageSizeOptions={[50, 100, 200, 500]}
+                apiRef={apiRef}
+                onFilterModelChange={(newModel) => {
+                    setTimeout(() => {
+                        const hasActiveFilters = newModel.items?.some((item) => item.value);
+                        const filteredLayers = (
+                            hasActiveFilters ?
+                            gridFilteredSortedRowEntriesSelector(apiRef).map((occupancy) => {
+                                return `${occupancy.model.floorNumber}_${occupancy.model.tenantId}`
+                            }) :
+                            []
+                        );
+
+                        visualizationProps.setSelectedLayers(filteredLayers);
+                    }, 10)
+                }}
             />
         </div>
     );

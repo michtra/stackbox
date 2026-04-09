@@ -10,6 +10,7 @@ import {
     Tooltip,
     Legend
 } from 'chart.js';
+import { useEffect, useState } from 'react';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
@@ -18,7 +19,7 @@ ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend)
  * @param {Object} stackingData - JSON endpoint output from data of a singular building
  * @returns {Object} - Chart.js compatible data object
  */
-function buildFloorOccupancyData(stackingData) {
+function buildFloorOccupancyData(stackingData, floorNumbers) {
     const floors = stackingData.floors.length;
     
     // Create datasets for each tenant + vacancy
@@ -81,17 +82,21 @@ function buildFloorOccupancyData(stackingData) {
                 ([key, ds]) => ds.data.some(v => v > 0)
             )
         ),
-        "vacant": vacancyDataset
+        "Vacancy": vacancyDataset
     }).map(([key, ds]) => {return {id: key, ...ds, data: ds.data.reverse(), sf: ds.sf.reverse()}});
 
     return {
-        labels: Array.from({ length: floors }, (_, i) => `Floor ${i + 1}`).reverse(),
+        labels: floorNumbers.map((floorNumber) => `Floor ${floorNumber}`),
         datasets: activeDatasets
     };
 }
 
-export default function FloorOccupancyChart({ stackingData, title = 'Floor-by-Floor Occupancy', isDarkMode = false }) {
-    const data = buildFloorOccupancyData(stackingData);
+export default function FloorOccupancyChart({ stackingData, title = 'Floor-by-Floor Occupancy', isDarkMode = false, visualizationProps }) {
+    const floorNumbers = stackingData.floors.map((floor) => floor.floorNumber).reverse()
+    const data = buildFloorOccupancyData(stackingData, floorNumbers);
+    const tenantIds = data.datasets.map((tenant) => tenant.id);
+
+    const [visibleTenants, setVisibleTenants] = useState([...tenantIds, "Plate"]);
 
     const options = {
         responsive: true,
@@ -113,6 +118,21 @@ export default function FloorOccupancyChart({ stackingData, title = 'Floor-by-Fl
                     color: isDarkMode ? '#e2e8f0' : '#1f2937',
                     boxWidth: 12,
                     boxHeight: 12
+                },
+                onClick: (e, legendItem, legend) => {
+                    const newVisibleTenants = [...visibleTenants];
+                    setVisibleTenants(newVisibleTenants);
+                    visualizationProps.setSelectedTenants(newVisibleTenants);
+                    const index = legendItem.datasetIndex;
+                    if (legend.chart.isDatasetVisible(legendItem.datasetIndex)) {
+                        legend.chart.hide(legendItem.datasetIndex);
+                        legendItem.hidden = true;
+                        newVisibleTenants.splice(newVisibleTenants.indexOf(tenantIds[legendItem.datasetIndex]), 1);
+                    } else {
+                        legend.chart.show(legendItem.datasetIndex);
+                        legendItem.hidden = false;
+                        newVisibleTenants.push(tenantIds[legendItem.datasetIndex]);
+                    };
                 }
             },
             title: {
@@ -177,14 +197,30 @@ export default function FloorOccupancyChart({ stackingData, title = 'Floor-by-Fl
                     padding: 10
                 }
             }
+        },
+        onHover: (e, chartElement) => {
+            if (chartElement[0]) {
+                if (visualizationProps.selectedFloors.includes(floorNumbers[chartElement[0]?.index])) {
+                    return;
+                }
+                visualizationProps.setSelectedFloors([floorNumbers[chartElement[0]?.index]]);
+            }
         }
     };
 
     return (
-        <div className="w-full" style={{ 
-            height: `${Math.max(600, stackingData.floors.length * 40)}px`, 
-            backgroundColor: isDarkMode ? '#0f172b' : '#ffffff' 
-        }}>
+        <div
+            className="w-full"
+            style={{ 
+                height: `${Math.max(600, stackingData.floors.length * 40)}px`, 
+                backgroundColor: isDarkMode ? '#0f172b' : '#ffffff' 
+            }}
+            onMouseLeave={() => {
+                if (visualizationProps.selectedFloors.length !== 0) {
+                    visualizationProps.setSelectedFloors([]);
+                }
+            }}
+        >
             <Bar data={data} options={options} />
         </div>
     );

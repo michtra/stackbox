@@ -16,6 +16,23 @@ export default function Page() {
     const [isDarkMode, setIsDarkMode] = useState(false);
     const [stacking, setStacking] = useState();
 
+    const [rerenderFloors, setRerenderFloors] = useState(new Set());
+
+    const [selectedFloors, setSelectedFloors] = useState([]);
+    const [selectedTenants, setSelectedTenants] = useState([]);
+    const [selectedLayers, setSelectedLayers] = useState([]);
+
+    const visualizationProps = {
+        rerenderFloors: rerenderFloors,
+        setRerenderFloors: setRerenderFloors,
+        selectedFloors: selectedFloors,
+        setSelectedFloors: setSelectedFloors,
+        selectedTenants: selectedTenants,
+        setSelectedTenants: setSelectedTenants,
+        selectedLayers: selectedLayers,
+        setSelectedLayers: setSelectedLayers,
+    }
+
     useEffect(() => {
         getBuilding(params.slug).then((val) => {
             if (val.building && val.tenants && val.floors && val.geometries) {
@@ -28,9 +45,9 @@ export default function Page() {
         <div className="relative w-full min-h-screen overflow-hidden">
             {
                 stacking ?
-                <ResizableWindows>
-                    <BuildingVisualization stackingData={stacking} isDarkMode={isDarkMode} />
-                    <BuildingInformation stackingData={stacking} isDarkMode={isDarkMode} />
+                <ResizableWindows isDarkMode={isDarkMode}>
+                    <BuildingVisualization stackingData={stacking} isDarkMode={isDarkMode} visualizationProps={visualizationProps} />
+                    <BuildingInformation stackingData={stacking} setStackingData={setStacking} isDarkMode={isDarkMode} visualizationProps={visualizationProps} />
                 </ResizableWindows> :
                 <div className="w-full h-screen flex flex-col justify-center items-center">
                     <CircularProgress size="3rem" />

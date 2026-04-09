@@ -1,9 +1,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
-import { Upload } from "@mui/icons-material";
-import { Apartment } from "@mui/icons-material";
-import { ListAlt } from "@mui/icons-material";
+import { Upload, Apartment, ListAlt } from "@mui/icons-material";
 
 export default function SetupUploadForm({ isUploadPanelOpen, setIsUploadPanelOpen }) {
     const router = useRouter();
@@ -15,7 +13,7 @@ export default function SetupUploadForm({ isUploadPanelOpen, setIsUploadPanelOpe
 
     return (
         <div
-            className={clsx("absolute left-0 top-0 w-screen h-screen p-8 backdrop-blur-sm backdrop-brightness-50 dark:backdrop-brightness-200 transition-all", isUploadPanelOpen ? "z-20 opacity-100" : "-z-20 opacity-0 pointer-events-none")}
+            className={clsx("absolute left-0 top-0 w-screen h-screen px-32 py-16 backdrop-blur-sm backdrop-brightness-50 dark:backdrop-brightness-200 transition-all", isUploadPanelOpen ? "z-20 opacity-100" : "-z-20 opacity-0 pointer-events-none")}
             onClick={() => {
                 setIsUploadPanelOpen(false);
             }}

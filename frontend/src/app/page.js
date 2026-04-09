@@ -18,6 +18,7 @@ export default function Page() {
     const [propertyListingData, setPropertyListingData] = useState();
     const [page, setPage] = useState(1);
     const [limit, setLimit] = useState(20);
+    const [search, setSearch] = useState();
 
     const paginationProps = {
         page: page,
@@ -27,18 +28,18 @@ export default function Page() {
     }
     
     useEffect(() => {
-        getBuildingListing(page, limit).then((val) => {
+        getBuildingListing(page, limit, search).then((val) => {
             setPropertyListingData(val);
         });
-    }, [page, limit]);
+    }, [page, limit, search]);
 
     return (
         <div className="relative w-full min-h-screen overflow-hidden">
             {
                 propertyListingData ?
-                <ResizableWindows>
+                <ResizableWindows isDarkMode={isDarkMode}>
                     <ListingVisualization propertyListingData={propertyListingData} isDarkMode={isDarkMode} mapRef={mapRef} />
-                    <PropertyListing propertyListingData={propertyListingData} mapRef={mapRef} paginationProps={paginationProps} />
+                    <PropertyListing propertyListingData={propertyListingData} setPropertyListingData={setPropertyListingData} mapRef={mapRef} paginationProps={paginationProps} setSearch={setSearch} />
                 </ResizableWindows> :
                 <div className="w-full h-screen flex flex-col justify-center items-center">
                     <CircularProgress size="3rem" />

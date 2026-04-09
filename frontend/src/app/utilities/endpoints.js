@@ -180,10 +180,10 @@ async function getBuilding(id) {
  * @param {int} limit Max number of buildings on one page.
  * @returns Pagination data according to BuildingListResponse.
  */
-async function getBuildingListing(page, limit) {
+async function getBuildingListing(page, limit, search) {
     try {
         const headers = await authHeaders();
-        const buildingListingResponse = await fetch(`${process.env.NEXT_PUBLIC_SERVER_URL}/api/buildings?page=${page}&limit=${limit}`, { headers });
+        const buildingListingResponse = await fetch(`${process.env.NEXT_PUBLIC_SERVER_URL}/api/buildings?page=${page}&limit=${limit}${search ? `&search=${search}` : ""}`, { headers });
         if (!buildingListingResponse.ok) {
             console.error("Network error when getting building list:", buildingListingResponse.statusText);
             return;
@@ -195,4 +195,225 @@ async function getBuildingListing(page, limit) {
     }
 }
 
-export { urlToFile, createBuilding, getBuilding, getBuildingListing, getUserCredentials, getBuildingMetadata, isBlobUrlValid };
+async function saveTenantEndpoint(tenantId, changes) {
+    try {
+        var body = {}
+        if (changes.name) body.name = changes.name;
+        if (changes.color) body.color = changes.color;
+
+        const response = await fetch(`${process.env.NEXT_PUBLIC_SERVER_URL}/api/tenants/${tenantId}`, {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json",
+                ...await authHeaders(),
+            },
+            body: JSON.stringify(body),
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(errorText || response.statusText);
+        }
+    }
+    catch (error) {
+        console.error("Error when saving tenant:", error);
+        throw error;
+    }
+}
+
+async function saveTenantAllEndpoint(buildingId, changesByTenantId) {
+    try {
+        const body = Object.entries(changesByTenantId).map(([tenantId, changes]) => {
+            return { id: tenantId, ...changes };
+        });
+
+        const response = await fetch(`${process.env.NEXT_PUBLIC_SERVER_URL}/api/buildings/${buildingId}/tenants`, {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json",
+                ...await authHeaders(),
+            },
+            body: JSON.stringify(body),
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(errorText || response.statusText);
+        }
+    }
+    catch (error) {
+        console.error("Error when saving all tenants:", error);
+        throw error;
+    }
+}
+
+async function saveOccupanciesEndpoint(buildingId, changesByOccupancyId) {
+    try {
+        const body = Object.entries(changesByOccupancyId).map(([occupancyId, changes]) => {
+            return {
+                id: occupancyId,
+                ...changes
+            };
+        });
+
+        const response = await fetch(`${process.env.NEXT_PUBLIC_SERVER_URL}/api/buildings/${buildingId}/occupancies`, {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json",
+                ...await authHeaders(),
+            },
+            body: JSON.stringify(body),
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(errorText || response.statusText);
+        }
+
+        return (await response.json()).data;
+    }
+    catch (error) {
+        console.error("Error when saving occupancies:", error);
+        throw error;
+    }
+}
+
+async function deleteOccupanciesEndpoint(buildingId, occupancyIdList) {
+    try {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_SERVER_URL}/api/buildings/${buildingId}/occupancies`, {
+            method: "DELETE",
+            headers: {
+                "Content-Type": "application/json",
+                ...await authHeaders(),
+            },
+            body: JSON.stringify(occupancyIdList),
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(errorText || response.statusText);
+        }
+
+        return response;
+    }
+    catch (error) {
+        console.error("Error when deleting occupancies:", error);
+        throw error;
+    }
+}
+
+async function createTenantEndpoint(tenantData) {
+    try {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_SERVER_URL}/api/tenants`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                ...await authHeaders(),
+            },
+            body: JSON.stringify(tenantData),
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(errorText || response.statusText);
+        }
+
+        return (await response.json()).data;
+    }
+    catch (error) {
+        console.error("Error when creating tenant:", error);
+        throw error;
+    }
+}
+
+async function addOccupancyEndpoint(buildingId, occupancyData) {
+    try {
+        const body = {
+            tenantId: occupancyData?.tenantId,
+            roomNumber: occupancyData?.roomNumber,
+            squareFeet: occupancyData?.squareFeet,
+            baseRent: occupancyData?.baseRent,
+            leaseType: occupancyData?.leaseType,
+            leaseStart: occupancyData?.leaseStart,
+            leaseEnd: occupancyData?.leaseEnd,
+        }
+
+        var tenantData = null;
+
+        if (body.tenantId == "new") {
+            const tenantEndpointData = {
+                name: occupancyData?.newTenantName,
+                color: occupancyData?.newTenantColor,
+                contact: {}
+            };
+            if (occupancyData?.newTenantContactEmail) {
+                tenantEndpointData.contact.email = occupancyData?.newTenantContactEmail;
+            }
+            if (occupancyData?.newTenantContactPhone) {
+                tenantEndpointData.contact.phone = occupancyData?.newTenantContactPhone;
+            }
+            tenantData = await createTenantEndpoint(tenantEndpointData);
+            body.tenantId = tenantData.id;
+        }
+
+        const occupancyResponse = await fetch(`${process.env.NEXT_PUBLIC_SERVER_URL}/api/buildings/${buildingId}/floors/${occupancyData?.floorNumber}/occupancies`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                ...await authHeaders(),
+            },
+            body: JSON.stringify(body),
+        });
+
+        if (!occupancyResponse.ok) {
+            const errorText = await occupancyResponse.text();
+            throw new Error(errorText || occupancyResponse.statusText);
+        }
+
+        return {
+            "floorData": (await occupancyResponse.json()).data,
+            "tenantData": tenantData
+        };
+    }
+    catch (error) {
+        console.error("Error when creating tenant:", error);
+        throw error;
+    }
+}
+
+async function deleteBuildingEndpoint(buildingId) {
+    try {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_SERVER_URL}/api/buildings/${buildingId}`, {
+            method: "DELETE",
+            headers: await authHeaders(),
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(errorText || response.statusText);
+        }
+
+        return response;
+    }
+    catch (error) {
+        console.error("Error when deleting building:", error);
+        throw error;
+    }
+}
+
+export {
+    urlToFile,
+    createBuilding,
+    getBuilding,
+    getBuildingListing,
+    getUserCredentials,
+    getBuildingMetadata,
+    isBlobUrlValid,
+    saveTenantEndpoint,
+    saveTenantAllEndpoint,
+    saveOccupanciesEndpoint,
+    deleteOccupanciesEndpoint,
+    createTenantEndpoint,
+    addOccupancyEndpoint,
+    deleteBuildingEndpoint,
+};
