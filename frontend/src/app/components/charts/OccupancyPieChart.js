@@ -163,7 +163,7 @@ export default function OccupancyPieChart({ stackingData, title = 'Tenant Occupa
                     backgroundColor: isDarkMode ? '#0f172b' : '#ffffff'
                 }}
                 onMouseLeave={() => {
-                    if (visualizationProps.selectedTenants.size !== 0) {
+                    if (visualizationProps.selectedTenants.length !== 0) {
                         visualizationProps.setSelectedTenants(visibleTenants);
                     }
                 }}

@@ -366,8 +366,8 @@ async function addOccupancyEndpoint(buildingId, occupancyData) {
         });
 
         if (!occupancyResponse.ok) {
-            const errorText = await response.text();
-            throw new Error(errorText || response.statusText);
+            const errorText = await occupancyResponse.text();
+            throw new Error(errorText || occupancyResponse.statusText);
         }
 
         return {

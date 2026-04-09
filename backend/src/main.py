@@ -777,6 +777,9 @@ async def update_occupancy_multiple(id: UUID, occupancies: List[OccupancyUpdate]
                 db_occupancy.lease_type = occupancy.leaseType
 
         db.commit()
+    except HTTPException:
+        db.rollback()
+        raise
     except Exception as e:
         db.rollback()
         raise HTTPException(

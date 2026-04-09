@@ -34,7 +34,9 @@ function AddOccupancyForm({ stackingData, formData, setFormData, tenantValueOpti
                     value={formData.floorNumber ?? ""}
                     min={1}
                     max={stackingData?.building?.metadata.totalFloors || 0}
-                    isValid={isInputValidRefs.floorNumber}
+                    isValidOverride={(val) => {
+                        isInputValidRefs.current.floorNumber = val;
+                    }}
                     isIntOnly={true}
                     showIncrementButton={false}
                     onChange={(val) => {
@@ -44,7 +46,7 @@ function AddOccupancyForm({ stackingData, formData, setFormData, tenantValueOpti
                                 "floorNumber": val
                             };
                         });
-                        setSquareFootRefreshToggle(!squareFootRefreshToggle)
+                        setSquareFootRefreshToggle(!squareFootRefreshToggle);
                     }}
                 />
             </div>
@@ -59,7 +61,7 @@ function AddOccupancyForm({ stackingData, formData, setFormData, tenantValueOpti
                                 "roomNumber": e.target.value
                             };
                         });
-                        isInputValidRefs.roomNumber.current = Boolean(e.target.value?.length);
+                        isInputValidRefs.current.roomNumber = Boolean(e.target.value?.length);
                     }}
                     className="flex flex-row px-4 py-2 gap-2 justify-between items-center outline rounded-sm focus-within:outline-blue-500 focus-within:outline-2"
                 />
@@ -77,7 +79,7 @@ function AddOccupancyForm({ stackingData, formData, setFormData, tenantValueOpti
                                 "leaseType": e.target.value
                             };
                         });
-                        isInputValidRefs.leaseType.current = Boolean(e.target.value?.length);
+                        isInputValidRefs.current.leaseType = Boolean(e.target.value?.length);
                     }}
                 >
                     {leaseTypeValueOptions.map((leaseType) => <MenuItem value={leaseType}>{leaseType}</MenuItem>)}
@@ -96,7 +98,7 @@ function AddOccupancyForm({ stackingData, formData, setFormData, tenantValueOpti
                                 "tenantId": e.target.value
                             };
                         });
-                        isInputValidRefs.tenantId.current = Boolean(e.target.value?.length);
+                        isInputValidRefs.current.tenantId = Boolean(e.target.value?.length);
                     }}
                 >
                     {tenantValueOptions.map((tenant) => <MenuItem value={tenant.value}>{tenant.label}</MenuItem>)}
@@ -117,7 +119,7 @@ function AddOccupancyForm({ stackingData, formData, setFormData, tenantValueOpti
                                         "newTenantName": e.target.value
                                     };
                                 });
-                                isInputValidRefs.newTenantName.current = Boolean(e.target.value?.length);
+                                isInputValidRefs.current.newTenantName = Boolean(e.target.value?.length);
                             }}
                             className="flex flex-row px-4 py-2 gap-2 justify-between items-center outline rounded-sm focus-within:outline-blue-500 focus-within:outline-2"
                         />
@@ -133,7 +135,7 @@ function AddOccupancyForm({ stackingData, formData, setFormData, tenantValueOpti
                                         "newTenantColor": e.target.value
                                     };
                                 });
-                                isInputValidRefs.newTenantColor.current = Boolean(e.target.value?.length);
+                                isInputValidRefs.current.newTenantColor = Boolean(e.target.value?.length);
                             }}
                             className="flex flex-row px-4 py-2 gap-2 justify-between items-center outline rounded-sm focus-within:outline-blue-500 focus-within:outline-2"
                         />
@@ -149,7 +151,7 @@ function AddOccupancyForm({ stackingData, formData, setFormData, tenantValueOpti
                                         "newTenantContactEmail": e.target.value
                                     };
                                 });
-                                isInputValidRefs.newTenantContactEmail.current = Boolean(e.target.value?.length);
+                                isInputValidRefs.current.newTenantContactEmail = Boolean(e.target.value?.length);
                             }}
                             className="flex flex-row px-4 py-2 gap-2 justify-between items-center outline rounded-sm focus-within:outline-blue-500 focus-within:outline-2"
                         />
@@ -165,7 +167,7 @@ function AddOccupancyForm({ stackingData, formData, setFormData, tenantValueOpti
                                         "newTenantContactPhone": e.target.value
                                     };
                                 });
-                                isInputValidRefs.newTenantContactPhone.current = Boolean(e.target.value?.length);
+                                isInputValidRefs.current.newTenantContactPhone = Boolean(e.target.value?.length);
                             }}
                             className="flex flex-row px-4 py-2 gap-2 justify-between items-center outline rounded-sm focus-within:outline-blue-500 focus-within:outline-2"
                         />
@@ -178,6 +180,12 @@ function AddOccupancyForm({ stackingData, formData, setFormData, tenantValueOpti
                         <span>Lease Start</span>
                         <DateField
                             value={formData.leaseStart}
+                            slotProps={{
+                                textField: {
+                                    error: !isInputValidRefs.current.leaseStart,
+                                    helperText: !isInputValidRefs.current.leaseStart && "Date must be before lease end."
+                                }
+                            }}
                             onChange={(val) => {
                                 setFormData((prev) => {
                                     return {
@@ -185,7 +193,9 @@ function AddOccupancyForm({ stackingData, formData, setFormData, tenantValueOpti
                                         "leaseStart": val
                                     };
                                 });
-                                isInputValidRefs.leaseStart.current = val?.isValid();
+                                const isDateOrdered = formData.leaseEnd?.isValid() && val?.isBefore(formData.leaseEnd)
+                                isInputValidRefs.current.leaseStart = !!(val?.isValid() && isDateOrdered);
+                                isInputValidRefs.current.leaseEnd = !!isDateOrdered;
                             }}
                         />
                     </div>
@@ -193,6 +203,12 @@ function AddOccupancyForm({ stackingData, formData, setFormData, tenantValueOpti
                         <span>Lease End</span>
                         <DateField
                             value={formData.leaseEnd}
+                            slotProps={{
+                                textField: {
+                                    error: !isInputValidRefs.current.leaseEnd,
+                                    helperText: !isInputValidRefs.current.leaseEnd && "Date must be after lease start."
+                                }
+                            }}
                             onChange={(val) => {
                                 setFormData((prev) => {
                                     return {
@@ -200,7 +216,9 @@ function AddOccupancyForm({ stackingData, formData, setFormData, tenantValueOpti
                                         "leaseEnd": val
                                     };
                                 });
-                                isInputValidRefs.leaseEnd.current = val?.isValid();
+                                const isDateOrdered = formData.leaseStart?.isValid() && val?.isAfter(formData.leaseStart)
+                                isInputValidRefs.current.leaseEnd = !!(val?.isValid() && isDateOrdered);
+                                isInputValidRefs.current.leaseStart = !!isDateOrdered;
                             }}
                         />
                     </div>
@@ -212,7 +230,9 @@ function AddOccupancyForm({ stackingData, formData, setFormData, tenantValueOpti
                     value={formData.squareFeet ?? ""}
                     min={0}
                     max={floorSFRemainingMap[formData.floorNumber] || 0}
-                    isValid={isInputValidRefs.squareFeet}
+                    isValidOverride={(val) => {
+                        isInputValidRefs.current.squareFeet = val;
+                    }}
                     showIncrementButton={false}
                     refreshToggle={squareFootRefreshToggle}
                     onChange={(val) => {
@@ -230,7 +250,9 @@ function AddOccupancyForm({ stackingData, formData, setFormData, tenantValueOpti
                 <NumberInput
                     value={formData.baseRent ?? ""}
                     min={0}
-                    isValid={isInputValidRefs.baseRent}
+                    isValidOverride={(val) => {
+                        isInputValidRefs.current.baseRent = val;
+                    }}
                     showIncrementButton={false}
                     onChange={(val) => {
                         setFormData((prev) => {
@@ -259,7 +281,7 @@ export default function OccupancyEditForm({ stackingData, setStackingData, isDar
 
     const [editedRentalDataMap, setEditedRentalDataMap] = useState({});
 
-    const [rowSelectionModel, setRowSelectionModel] = useState([]);
+    const [rowSelectionModel, setRowSelectionModel] = useState({});
     const [isDeleteConfirmationOpen, setIsDeleteConfirmationOpen] = useState(false);
 
     const defaultNewOccupancyData = {
@@ -278,7 +300,7 @@ export default function OccupancyEditForm({ stackingData, setStackingData, isDar
     }
 
     const [isAddFormOpen, setIsAddFormOpen] = useState(false);
-    const isNewOccupancyInputValidRefs = Object.fromEntries(Object.keys(defaultNewOccupancyData).map((key) => [key, useRef(false)]));
+    const isNewOccupancyInputValidRefs = useRef(Object.fromEntries(Object.keys(defaultNewOccupancyData).map((key) => [key, false])));
     const [newOccupancyData, setNewOccupancyData] = useState(defaultNewOccupancyData);
 
     async function saveOccupancies() {
@@ -442,7 +464,6 @@ export default function OccupancyEditForm({ stackingData, setStackingData, isDar
                     {...floor}
                 ))
             }
-            console.log(addOccupancyData);
 
             if (addOccupancyData.tenantData) {
                 newStackingData.tenants.push(addOccupancyData.tenantData);
@@ -646,6 +667,7 @@ export default function OccupancyEditForm({ stackingData, setStackingData, isDar
                             type="button"
                             className="h-10 px-4 border rounded-lg hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-all disabled:bg-transparent disabled:text-black/50 dark:disabled:bg-transparent dark:disabled:text-white/50 disabled:cursor-not-allowed"
                             onClick={() => {
+                                isNewOccupancyInputValidRefs.current = Object.fromEntries(Object.keys(defaultNewOccupancyData).map((key) => [key, false]))
                                 setNewOccupancyData(defaultNewOccupancyData);
                                 setIsAddFormOpen(true);
                             }}
@@ -692,8 +714,7 @@ export default function OccupancyEditForm({ stackingData, setStackingData, isDar
                                         <button
                                             className="h-10 px-4 border rounded-lg hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-all"
                                             onClick={() => {
-                                                console.log(isNewOccupancyInputValidRefs)
-                                                if (Object.entries(isNewOccupancyInputValidRefs).some(([key, val]) => !val.current && !(newOccupancyData.tenantId !== "new" && key.includes("newTenant")) && key !== "newTenantContactEmail" && key !== "newTenantContactPhone")) {
+                                                if (Object.entries(isNewOccupancyInputValidRefs.current).some(([key, val]) => !val && !(newOccupancyData.tenantId !== "new" && key.includes("newTenant")) && key !== "newTenantContactEmail" && key !== "newTenantContactPhone")) {
                                                     setSaveState({ status: "error", message: "Incomplete data." });
                                                 }
                                                 else {

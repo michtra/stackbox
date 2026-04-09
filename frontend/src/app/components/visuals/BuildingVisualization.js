@@ -20,10 +20,6 @@ export default function BuildingVisualization({ stackingData, isDarkMode = false
     var floorData = proportionBuilding(stackingData);
     const unselectedOpacity = 0.1
 
-    const showInfo = (e) => {
-        console.log("Click!", e);
-    }
-
     const determineOpacity = (key) => {
         return (
             (visualizationProps.selectedFloors.length === 0 || visualizationProps.selectedFloors.includes(parseInt(key.split("_")[0], 10))) &&

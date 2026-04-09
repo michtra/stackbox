@@ -1,10 +1,30 @@
 import clsx from "clsx";
 import { useEffect, useState } from "react";
 
-export default function NumberInput({ value, onChange, increment, min = -Infinity, max = Infinity, isValid, isIntOnly = false, showIncrementButton = true, children, refreshToggle }) {
+export default function NumberInput({
+    value,
+    onChange,
+    increment,
+    min = -Infinity,
+    max = Infinity,
+    isValid,
+    isIntOnly = false,
+    showIncrementButton = true,
+    refreshToggle,
+    isValidOverride = null,
+}) {
     const [isError, setIsError] = useState(false);
     const [errorInfo, setErrorInfo] = useState("");
     const [displayValue, setDisplayValue] = useState(value);
+
+    const setIsValid = (val) => {
+        if (isValidOverride !== null) {
+            isValidOverride(val);
+        }
+        else {
+            isValid.current = val;
+        }
+    }
 
     useEffect(() => {
         setDisplayValue(value);
@@ -12,11 +32,11 @@ export default function NumberInput({ value, onChange, increment, min = -Infinit
 
     useEffect(() => {
         if (value !== NaN && min <= value && value <= max) {
-            isValid.current = true;
+            setIsValid(true);
             setIsError(false);
         }
         else {
-            isValid.current = false;
+            setIsValid(false);
             setIsError(true);
             setErrorInfo(`Number must be between ${min} and ${max}.`);
         }
@@ -50,19 +70,19 @@ export default function NumberInput({ value, onChange, increment, min = -Infinit
                         if (typeof onChange == "function" && newValue !== NaN) {
                             setDisplayValue(e.target.value);
                             if (min <= newValue && newValue <= max) {
-                                isValid.current = true;
+                                setIsValid(true);
                                 setIsError(false);
                                 onChange(newValue);
                             }
                             else {
-                                isValid.current = false;
+                                setIsValid(false);
                                 setIsError(true);
                                 setErrorInfo(`Number must be between ${min} and ${max}.`);
                             }
                         }
                         else if (typeof onChange == "function" && (!e.target.value || e.target.value == "-")) {
                             setDisplayValue(e.target.value);
-                            isValid.current = false;
+                            setIsValid(false);
                             setIsError(true);
                             setErrorInfo("Field cannot be empty.")
                         }

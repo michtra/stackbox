@@ -22,7 +22,6 @@ export default function PropertyListing({ className, propertyListingData, setPro
 
     async function deleteBuilding() {
         try {
-            console.log(selectedProperty)
             if (!selectedProperty) {
                 return;
             }

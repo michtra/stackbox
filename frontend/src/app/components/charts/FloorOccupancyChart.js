@@ -216,7 +216,7 @@ export default function FloorOccupancyChart({ stackingData, title = 'Floor-by-Fl
                 backgroundColor: isDarkMode ? '#0f172b' : '#ffffff' 
             }}
             onMouseLeave={() => {
-                if (visualizationProps.selectedFloors.size !== 0) {
+                if (visualizationProps.selectedFloors.length !== 0) {
                     visualizationProps.setSelectedFloors([]);
                 }
             }}
