@@ -203,3 +203,81 @@ class TestOccupancyEndpoints:
         )
         assert response.status_code == 404
         assert response.json()["detail"] == "Floor not found"
+
+    def test_update_occupancy_floor_not_found_returns_404(self, client_with_db):
+        client, db = client_with_db
+        db.query.return_value.filter.return_value.first.return_value = None
+
+        response = client.put(
+            f"/api/buildings/{uuid4()}/floors/1/occupancies/{uuid4()}",
+            json={"squareFeet": 3000.0},
+        )
+        assert response.status_code == 404
+        assert response.json()["detail"] == "Floor not found"
+
+    def test_update_occupancy_not_found_returns_404(self, client_with_db):
+        client, db = client_with_db
+        floor = MagicMock(spec=FloorModel)
+        floor.id = str(uuid4())
+
+        def query_side_effect(model):
+            m = MagicMock()
+            if model == FloorModel:
+                m.filter.return_value.first.return_value = floor
+            elif model == OccupancyModel:
+                m.filter.return_value.first.return_value = None
+            return m
+
+        db.query.side_effect = query_side_effect
+
+        response = client.put(
+            f"/api/buildings/{uuid4()}/floors/1/occupancies/{uuid4()}",
+            json={"squareFeet": 3000.0},
+        )
+        assert response.status_code == 404
+        assert response.json()["detail"] == "Occupancy record not found"
+
+
+class TestTenantEndpoints:
+    def test_get_tenant_not_found_returns_404(self, client_with_db):
+        client, db = client_with_db
+        db.query.return_value.filter.return_value.first.return_value = None
+
+        response = client.get(f"/api/tenants/{uuid4()}")
+        assert response.status_code == 404
+        assert response.json()["detail"] == "Tenant not found"
+
+    def test_update_tenant_not_found_returns_404(self, client_with_db):
+        client, db = client_with_db
+        db.query.return_value.filter.return_value.first.return_value = None
+
+        response = client.put(f"/api/tenants/{uuid4()}", json={"name": "New Name"})
+        assert response.status_code == 404
+        assert response.json()["detail"] == "Tenant not found"
+
+    def test_delete_tenant_not_found_returns_404(self, client_with_db):
+        client, db = client_with_db
+        db.query.return_value.filter.return_value.first.return_value = None
+
+        response = client.delete(f"/api/tenants/{uuid4()}")
+        assert response.status_code == 404
+        assert response.json()["detail"] == "Tenant not found"
+
+    def test_update_tenant_invalid_color_returns_422(self, client):
+        response = client.put(
+            f"/api/tenants/{uuid4()}",
+            json={"color": "not-a-color"},
+        )
+        assert response.status_code == 422
+
+
+class TestMeEndpoint:
+    def test_get_me_returns_user_fields(self, client):
+        response = client.get("/api/me")
+        assert response.status_code == 200
+        data = response.json()["data"]
+        assert "email" in data
+        assert "name" in data
+        assert "sub" in data
+        assert data["email"] == "test@test.com"
+        assert data["name"] == "Test User"

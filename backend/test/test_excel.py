@@ -2,6 +2,7 @@ import json
 import pytest
 from pathlib import Path
 from fastapi.testclient import TestClient
+from uuid import UUID
 
 from main import app
 from auth import CognitoUser, get_current_user
@@ -46,6 +47,51 @@ def test_excel_json_output():
     result = excel_loader(RENT_ROLL)
     Path("test/output").mkdir(exist_ok=True)
     Path("test/output/test_excel_out.json").write_text(json.dumps(result, indent=2))
+
+
+def test_excel_occupancy_sqft_non_negative():
+    result = excel_loader(RENT_ROLL)
+    for floor in result["floors"]:
+        for occ in floor["occupancies"]:
+            sqft = occ.get("squareFeet") or occ.get("square_feet")
+            if sqft is not None:
+                assert sqft >= 0, f"Negative squareFeet on floor {floor.get('floorNumber')}: {sqft}"
+
+
+def test_excel_tenant_names_unique():
+    result = excel_loader(RENT_ROLL)
+    names = [t["name"] for t in result["tenants"]]
+    assert len(names) == len(set(names)), f"Duplicate tenant names: {[n for n in names if names.count(n) > 1]}"
+
+
+def test_excel_lease_dates_ordered():
+    """Where both lease dates are present, start must precede end."""
+    result = excel_loader(RENT_ROLL)
+    for floor in result["floors"]:
+        for occ in floor["occupancies"]:
+            start = occ.get("leaseStart") or occ.get("lease_start")
+            end = occ.get("leaseEnd") or occ.get("lease_end")
+            if start and end:
+                assert start < end, f"Lease start {start} >= end {end} on floor {floor.get('floorNumber')}"
+
+
+def test_excel_every_occupancy_has_tenant_id():
+    result = excel_loader(RENT_ROLL)
+    for floor in result["floors"]:
+        for occ in floor["occupancies"]:
+            tid = occ.get("tenantId") or occ.get("tenant_id")
+            assert tid, f"Occupancy on floor {floor.get('floorNumber')} missing tenantId"
+
+
+def test_excel_all_tenant_ids_referenced():
+    """Every tenantId in occupancies must appear in the top-level tenants list."""
+    result = excel_loader(RENT_ROLL)
+    tenant_ids = {t["id"] for t in result["tenants"]}
+    for floor in result["floors"]:
+        for occ in floor["occupancies"]:
+            tid = occ.get("tenantId") or occ.get("tenant_id")
+            assert str(tid) in tenant_ids or tid in tenant_ids, \
+                f"tenantId {tid} on floor {floor.get('floorNumber')} not in tenants list"
 
 
 def _test_user():
@@ -137,3 +183,110 @@ def test_excel_load_to_db(client):
                     next(gen2)
                 except StopIteration:
                     pass
+
+
+def _cleanup_building_and_tenants(client, building_id: UUID, tenant_ids: set):
+    """Delete building (cascade) then orphaned tenants."""
+    client.delete(f"/api/buildings/{building_id}")
+    if not tenant_ids:
+        return
+    gen = get_db()
+    db = next(gen)
+    try:
+        for tid in tenant_ids:
+            t = db.query(TenantModel).filter(TenantModel.id == tid).first()
+            if t:
+                db.delete(t)
+        db.commit()
+    except Exception:
+        db.rollback()
+    finally:
+        try:
+            next(gen)
+        except StopIteration:
+            pass
+
+
+@skip_no_db
+def test_excel_upload_endpoint(client):
+    """POST /api/buildings/{id}/upload/excel — verifies file upload, DB population, and response shape."""
+    building_json = json.dumps({
+        "name": "__stackbox_excel_endpoint_test__",
+        "address": {
+            "street": "2 Upload St",
+            "city": "UploadCity",
+            "state": "TX",
+            "zip": "77002",
+            "country": "US",
+        },
+        "location": {"latitude": 29.76, "longitude": -95.37},
+        "metadata": {"totalFloors": 10, "heightMeters": 40.0},
+    })
+    create_resp = client.post("/api/buildings", data={"building": building_json})
+    assert create_resp.status_code == 201, f"Could not create temp building: {create_resp.json()}"
+    building_id = UUID(create_resp.json()["data"]["id"])
+
+    tenant_ids: set = set()
+    try:
+        with open(RENT_ROLL, "rb") as f:
+            upload_resp = client.post(
+                f"/api/buildings/{building_id}/upload/excel",
+                files={"file": ("Rent Roll Example.xlsx", f, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")},
+            )
+
+        assert upload_resp.status_code == 200
+        body = upload_resp.json()
+        assert "data" in body
+        data = body["data"]
+        assert "jobId" in data
+        assert "status" in data
+        assert "message" in data
+
+        # Verify DB was populated
+        gen = get_db()
+        db = next(gen)
+        try:
+            floors = db.query(FloorModel).filter(FloorModel.building_id == building_id).all()
+            assert len(floors) > 0, "upload/excel created no floors in DB"
+
+            occupancies = (
+                db.query(OccupancyModel)
+                .join(FloorModel, FloorModel.id == OccupancyModel.floor_id)
+                .filter(FloorModel.building_id == building_id)
+                .all()
+            )
+            assert len(occupancies) > 0, "upload/excel created no occupancies in DB"
+
+            for occ in occupancies:
+                tenant_ids.add(occ.tenant_id)
+        finally:
+            try:
+                next(gen)
+            except StopIteration:
+                pass
+    finally:
+        _cleanup_building_and_tenants(client, building_id, tenant_ids)
+
+
+@skip_no_db
+def test_excel_upload_rejects_non_xlsx(client):
+    """POST /api/buildings/{id}/upload/excel returns 400 for non-.xlsx files."""
+    building_json = json.dumps({
+        "name": "__stackbox_excel_reject_test__",
+        "address": {"street": "3 Reject Ave", "city": "RejectCity", "state": "TX", "zip": "00003", "country": "US"},
+        "location": {"latitude": 30.0, "longitude": -97.0},
+        "metadata": {"totalFloors": 1, "heightMeters": 4.0},
+    })
+    create_resp = client.post("/api/buildings", data={"building": building_json})
+    assert create_resp.status_code == 201
+    building_id = create_resp.json()["data"]["id"]
+
+    try:
+        resp = client.post(
+            f"/api/buildings/{building_id}/upload/excel",
+            files={"file": ("data.csv", b"col1,col2\n1,2", "text/csv")},
+        )
+        assert resp.status_code == 400
+        assert "Only Excel" in resp.json()["detail"] or "xlsx" in resp.json()["detail"].lower()
+    finally:
+        client.delete(f"/api/buildings/{building_id}")

@@ -12,6 +12,8 @@ from models import (
     BuildingMetadata,
     Location,
     OccupancyCreate,
+    OccupancyUpdate,
+    FloorUpdate,
 )
 
 
@@ -103,3 +105,121 @@ class TestOccupancyCreate:
         )
         assert occ.leaseStart is None
         assert occ.leaseEnd is None
+
+    def test_missing_tenant_id_raises(self):
+        with pytest.raises(ValidationError):
+            OccupancyCreate(squareFeet=1000.0)
+
+
+class TestOccupancyUpdate:
+    def test_all_none_is_valid(self):
+        upd = OccupancyUpdate()
+        assert upd.squareFeet is None
+        assert upd.leaseStart is None
+        assert upd.leaseEnd is None
+
+    def test_partial_sqft_only(self):
+        upd = OccupancyUpdate(squareFeet=3000.0)
+        assert upd.squareFeet == 3000.0
+        assert upd.leaseStart is None
+
+    def test_partial_dates_only(self):
+        from datetime import datetime
+        upd = OccupancyUpdate(
+            leaseStart=datetime(2024, 1, 1),
+            leaseEnd=datetime(2025, 1, 1),
+        )
+        assert upd.squareFeet is None
+        assert upd.leaseStart is not None
+
+
+class TestBuildingMetadata:
+    def test_valid_minimal(self):
+        m = BuildingMetadata(totalFloors=10, heightMeters=50.0)
+        assert m.totalFloors == 10
+        assert m.heightMeters == 50.0
+
+    def test_optional_fields_default_none(self):
+        m = BuildingMetadata(totalFloors=5, heightMeters=20.0)
+        assert m.floorHeightMeters is None
+        assert m.grossSquareFeet is None
+        assert m.yearBuilt is None
+
+    def test_with_all_optional_fields(self):
+        m = BuildingMetadata(
+            totalFloors=10,
+            heightMeters=50.0,
+            floorHeightMeters=5.0,
+            grossSquareFeet=50000.0,
+            yearBuilt=2005,
+        )
+        assert m.yearBuilt == 2005
+        assert m.grossSquareFeet == 50000.0
+
+    def test_missing_required_field_raises(self):
+        with pytest.raises(ValidationError):
+            BuildingMetadata(totalFloors=5)
+
+
+class TestBuildingCreate:
+    def _valid_address(self):
+        return Address(street="1 Main St", city="Austin", state="TX", zip="78701", country="US")
+
+    def _valid_location(self):
+        return Location(latitude=30.0, longitude=-97.0)
+
+    def _valid_metadata(self):
+        return BuildingMetadata(totalFloors=5, heightMeters=20.0)
+
+    def test_valid_building_create(self):
+        b = BuildingCreate(
+            name="Test Tower",
+            address=self._valid_address(),
+            location=self._valid_location(),
+            metadata=self._valid_metadata(),
+        )
+        assert b.name == "Test Tower"
+
+    def test_missing_name_raises(self):
+        with pytest.raises(ValidationError):
+            BuildingCreate(
+                address=self._valid_address(),
+                location=self._valid_location(),
+                metadata=self._valid_metadata(),
+            )
+
+    def test_missing_address_raises(self):
+        with pytest.raises(ValidationError):
+            BuildingCreate(
+                name="Test Tower",
+                location=self._valid_location(),
+                metadata=self._valid_metadata(),
+            )
+
+    def test_missing_location_raises(self):
+        with pytest.raises(ValidationError):
+            BuildingCreate(
+                name="Test Tower",
+                address=self._valid_address(),
+                metadata=self._valid_metadata(),
+            )
+
+    def test_missing_metadata_raises(self):
+        with pytest.raises(ValidationError):
+            BuildingCreate(
+                name="Test Tower",
+                address=self._valid_address(),
+                location=self._valid_location(),
+            )
+
+
+class TestFloorUpdate:
+    def test_all_none_is_valid(self):
+        upd = FloorUpdate()
+        assert upd.label is None
+        assert upd.squareFeet is None
+
+    def test_label_only(self):
+        upd = FloorUpdate(label="Penthouse")
+        assert upd.label == "Penthouse"
+        assert upd.squareFeet is None
