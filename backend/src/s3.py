@@ -1,5 +1,7 @@
 """boto3 S3 client helpers."""
 
+from typing import Optional
+
 import boto3
 from botocore.exceptions import ClientError, NoCredentialsError
 from config import settings
@@ -41,7 +43,7 @@ def upload_file(key: str, content: bytes, content_type: str) -> None:
         raise RuntimeError(f"Failed to upload '{key}' to S3: {exc}") from exc
 
 
-def generate_presigned_url(key: str, expiration: int | None = None) -> str:
+def generate_presigned_url(key: str, expiration: Optional[int] = None) -> str:
     if expiration is None:
         expiration = settings.presigned_url_expiration
     try:

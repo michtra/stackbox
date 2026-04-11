@@ -1,6 +1,7 @@
 """
 Application configuration using environment variables
 """
+from typing import Optional
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -10,14 +11,14 @@ class Settings(BaseSettings):
     # AWS Configuration
     aws_region: str = "us-east-1"
     s3_bucket_name: str = "stackbox-uploads"
-    aws_access_key_id: str | None = None
-    aws_secret_access_key: str | None = None
-    aws_session_token: str | None = None
+    aws_access_key_id: Optional[str] = None
+    aws_secret_access_key: Optional[str] = None
+    aws_session_token: Optional[str] = None
 
     # Cognito Configuration
     cognito_region: str = "us-east-1"
-    cognito_user_pool_id: str | None = None
-    cognito_client_id: str | None = None
+    cognito_user_pool_id: Optional[str] = None
+    cognito_client_id: Optional[str] = None
 
     # Rate Limiting
     rate_limit_uploads: str = "10/minute"   # applied per user to STL + Excel upload endpoints

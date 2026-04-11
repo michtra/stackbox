@@ -1,6 +1,7 @@
 import io
 import os
 import tempfile
+from typing import Optional
 from uuid import UUID
 
 from fastapi import APIRouter, File, UploadFile, HTTPException, Query, status
@@ -15,7 +16,7 @@ async def upload_context_file(
     type: str,
     file: UploadFile,
     building_id: UUID = Query(..., alias="buildingId"),
-    floors: int | None = None,
+    floors: Optional[int] = None,
 ):
     """(Deprecated) Upload a file for processing and store it in S3.
 
