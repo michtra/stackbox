@@ -111,3 +111,4 @@ pm2 restart stackbox-backend stackbox-frontend
 - `.env` not loaded: uvicorn runs from `backend/src`, so `.env` must also be in `backend/src`.
 - `/api/auth/*` returns FastAPI 404: nginx `/api/auth/` block missing or placed after `/api/`.
 - 502 on `/api/auth/callback/cognito` with `upstream sent too big header`: Cognito JWT + NextAuth Set-Cookie exceed default proxy buffers. Raise `proxy_buffer_size` / `proxy_buffers`.
+- Browser shows "This page couldn't load" with 200 OK on main document: check DevTools Console. If `Failed to initialize WebGL` from Mapbox, client has WebGL disabled. Enable Chrome hardware acceleration. Mapbox GL requires WebGL.
